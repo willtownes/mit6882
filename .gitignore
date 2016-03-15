@@ -26,3 +26,6 @@ vignettes/*.pdf
 *.log
 *.pdf
 *.synctex.gz
+*.bbl
+*.blg
+*.out
