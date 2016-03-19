@@ -1,0 +1,32 @@
+---
+title: "DP"
+author: "Will Townes"
+date: "March 19, 2016"
+output: html_document
+---
+
+```{r}
+library(mvtnorm)
+library(ggplot2)
+```
+
+First we generate some fake data from a mixture model of three two-dimensional Gaussians.
+
+```{r}
+genCluster<-function(n,id,mu=c(0,0),sigma=diag(2)){
+  d<-data.frame(rmvnorm(n,mean=mu,sigma=sigma))
+  d$id<-id
+  return(d)
+}
+red<-genCluster(20,"1",sigma=cbind(c(2,-.5),c(-.5,2)))
+blue<-genCluster(20,"2",c(2,2))
+green<-genCluster(20,"3",c(-2,-2))
+dat<-rbind(red,blue,green)
+ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
+```
+
+Now we create a Gibbs Sampler for the Dirichlet Process
+
+```{r}
+
+```
