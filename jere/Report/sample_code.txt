@@ -1,0 +1,25 @@
+%%%% Step 1: Option Configuration %%%%
+name = 'mkl_demo';
+opt = gurls_defopt(name);
+opt = gurls_defopt_mkl(opt); % initialize opt.mkl
+opt.mkl.type = ... % specify kernel type/parameter by hand
+    {{'kernel_rbf', 1:5}, {'kernel_linear', 0}};
+
+%%%% Step 2: Task Sequence Configuration %%%%
+opt.seq = {...
+    'split:ho', ...
+    % kernel_mkl MUST be called before paramsel/rls    
+    'kernel:mkl', ...    
+    'paramsel:homkl', ...
+    'rls:dual_mkl', ...
+    'predkernel:traintest_mkl', ...
+    'pred:dual_mkl', ...
+    %perf support only rmsestd (regression)\macroavg (classification)
+    'perf:rmsestd'}; 
+
+opt.process{1} = [2,2,2,2,0,0,0];
+opt.process{2} = [3,3,3,3,2,2,2];
+
+%%%% Step 3: Execute Task Sequence %%%%
+gurls(Xtr, ytr, opt, 1);
+gurls(Xte, yte, opt, 2); 
