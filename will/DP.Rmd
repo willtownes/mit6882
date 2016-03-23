@@ -18,10 +18,16 @@ genCluster<-function(n,id,mu=c(0,0),sigma=diag(2)){
   d$id<-id
   return(d)
 }
-red<-genCluster(20,"1") #sigma=cbind(c(2,-.5),c(-.5,2))
-blue<-genCluster(20,"2",c(2,2))
-green<-genCluster(20,"3",c(-2,-2))
-dat<-rbind(red,blue,green)
+
+#upper left- isotropic
+red<-genCluster(20,"1",mu=c(-3,3)) #sigma=cbind(c(2,-.5),c(-.5,2))
+#upper right- stretched horizontally
+blue<-genCluster(20,"2",c(3,3),sigma=matrix(c(1.5,0,0,1),nrow=2))
+#lower right- positive correlation
+green<-genCluster(20,"3",c(3,-3),sigma=matrix(c(1,.8,.8,1),nrow=2))
+#lower left- negative correlation
+black<-genCluster(20,"4",c(-3,-3),sigma=matrix(c(1,-.8,-.8,1),nrow=2))
+dat<-rbind(red,blue,green,black)
 ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
 ```
 
@@ -30,5 +36,6 @@ Now we create a Gibbs Sampler for the Dirichlet Process. We specify a gaussian l
 The prior on the mean parameters is that they are iid from a dirichlet process with (variously specified) concentration parameters and base measure gaussian with mean zero and variance 10.
 
 ```{r}
+#for rmvt sampling from multivariate t, use type="shifted" to match notation of Murphy book
 
 ```
