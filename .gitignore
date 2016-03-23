@@ -31,4 +31,4 @@ vignettes/*.pdf
 *.out
 
 # Mac temp files
-*.DS_Store
+.DS_Store
