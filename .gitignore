@@ -29,3 +29,6 @@ vignettes/*.pdf
 *.bbl
 *.blg
 *.out
+
+# Mac temp files
+*.DS_Store
