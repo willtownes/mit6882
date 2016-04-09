@@ -33,7 +33,46 @@ ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
 
 Now we create a Gibbs Sampler for the Dirichlet Process. We specify a gaussian likelihood with known isotropic variance and unknown mean parameter. 
 
-The prior on the mean parameters is that they are iid from a dirichlet process with (variously specified) concentration parameters and base measure gaussian with mean zero and variance 10.
+The prior on the mean parameters is that they are iid from a dirichlet process with (variously specified) concentration parameters and base measure gaussian with mean zero and variance 10. Here are some samples from the prior.
+
+```{r}
+rstick<-function(N,alpha){
+  # returns a truncated stick breaking vector of weights
+  # alpha is concentration parameter
+  # N is the number of weights, set N to a large value to more closely approximate the true stick breaking distribution
+  # large alpha-> few clusters
+  # small alpha-> many clusters
+  betas<-rbeta(N,1,alpha)
+  betas[N]<-1 #truncation part
+  lbetas<-log(betas)
+  log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:N-1])
+  return(exp(lbetas+log_cumsum_1minus_betas))
+}
+# test this function
+stopifnot(sum(rstick(1,10))==1)
+
+rdp<-function(N,alpha,H){
+  # return samples from a dirichlet process with concentration parameter alpha and base measure H.
+  # uses stick breaking method rather than chinese restaurant process
+  # truncates stick breaking after N clusters
+  # calling H(N) should produce N random samples from distribution H
+  # returns a list of probabilities and atoms
+  pi_vals<-rstick(N,alpha)
+  atoms<-H(N)
+  return(list(probs=pi_vals,atoms=atoms))
+}
+
+visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,N=100){
+  # handy function for visualizing 1-dimensional DPs
+  # "H_density" should be the density version of "H" for plotting
+  test_dp<-data.frame(rdp(N,alpha,H))
+  ggbase<-ggplot(data=test_dp,aes(x=atoms,ymax=probs,ymin=0))+geom_linerange(size=2)+stat_function(fun=H_density,linetype=2)+ylab("probability density or mass")+theme_bw()
+  return(ggbase)
+}
+
+visualize_dp_1d(1)+ggtitle("DP with Normal(0,1) Base Measure, alpha=1")
+visualize_dp_1d(10)+ggtitle("DP with Normal(0,1) Base Measure, alpha=10")
+```
 
 ```{r}
 #for rmvt sampling from multivariate t, use type="shifted" to match notation of Murphy book
