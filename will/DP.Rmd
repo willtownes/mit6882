@@ -8,6 +8,8 @@ output: html_document
 ```{r}
 library(mvtnorm)
 library(ggplot2)
+#library(plyr)
+#library(MCMCpack)
 ```
 
 First we generate some fake data from a mixture model of three two-dimensional Gaussians. In the first simulation, we assume isotropic, known variance for all clusters.
@@ -36,42 +38,88 @@ Now we create a Gibbs Sampler for the Dirichlet Process. We specify a gaussian l
 The prior on the mean parameters is that they are iid from a dirichlet process with (variously specified) concentration parameters and base measure gaussian with mean zero and variance 10. Here are some samples from the prior.
 
 ```{r}
-rstick<-function(N,alpha){
+rstick<-function(K,alpha){
   # returns a truncated stick breaking vector of weights
   # alpha is concentration parameter
-  # N is the number of weights, set N to a large value to more closely approximate the true stick breaking distribution
+  # K is the number of weights, set K to a large value to more closely approximate the true stick breaking distribution
   # large alpha-> few clusters
   # small alpha-> many clusters
-  betas<-rbeta(N,1,alpha)
-  betas[N]<-1 #truncation part
+  betas<-rbeta(K,1,alpha)
+  betas[K]<-1 #truncation part
   lbetas<-log(betas)
-  log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:N-1])
+  log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:K-1])
   return(exp(lbetas+log_cumsum_1minus_betas))
 }
 # test this function
 stopifnot(sum(rstick(1,10))==1)
 
-rdp<-function(N,alpha,H){
+rdp<-function(K,alpha,H){
   # return samples from a dirichlet process with concentration parameter alpha and base measure H.
   # uses stick breaking method rather than chinese restaurant process
-  # truncates stick breaking after N clusters
-  # calling H(N) should produce N random samples from distribution H
+  # truncates stick breaking after K clusters
+  # calling H(K) should produce K random samples from distribution H
   # returns a list of probabilities and atoms
-  pi_vals<-rstick(N,alpha)
-  atoms<-H(N)
+  # ie, one sample from rdp is a probability measure over the atoms
+  pi_vals<-rstick(K,alpha)
+  atoms<-H(K)
   return(list(probs=pi_vals,atoms=atoms))
 }
 
-visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,N=100){
+visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,K=100){
   # handy function for visualizing 1-dimensional DPs
   # "H_density" should be the density version of "H" for plotting
-  test_dp<-data.frame(rdp(N,alpha,H))
+  test_dp<-data.frame(rdp(K,alpha,H))
   ggbase<-ggplot(data=test_dp,aes(x=atoms,ymax=probs,ymin=0))+geom_linerange(size=2)+stat_function(fun=H_density,linetype=2)+ylab("probability density or mass")+theme_bw()
   return(ggbase)
 }
 
 visualize_dp_1d(1)+ggtitle("DP with Normal(0,1) Base Measure, alpha=1")
 visualize_dp_1d(10)+ggtitle("DP with Normal(0,1) Base Measure, alpha=10")
+
+visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,K=100){
+  # handy function for visualizing 1-dimensional DPs
+  # "H_density" should be the density version of "H" for plotting
+  test_dp<-data.frame(rdp(K,alpha,H))
+  ggbase<-ggplot(data=test_dp,aes(x=atoms,ymax=probs,ymin=0))+geom_linerange(size=2)+stat_function(fun=H_density,linetype=2)+ylab("probability density or mass")+theme_bw()
+  return(ggbase)
+}
+```
+
+Next let's try simulating individual data points from a dirichlet process gaussian mixture model. The "N" data points come from an infinite mixture of gaussians in the following way. An infinite number of (mean, covariance) parameters are sampled from the base distribution (in reality truncated to K sets of parameters). An infinite number (actually, truncated to K) of weights are sampled from the stick breaking process. Then, we sample "N" times with replacement from the sets of (mean,covariance) parameters. Finally, a single data point is simulated from each of these sets. Conditional on cluster membership, a point is independently drawn from a gaussian.
+
+```{r}
+rNIW<-function(N,m,k,nu,S){
+  # return N samples from the normal-inverse wishart distribution
+  # m is mean
+  # k is "sample size" for mean
+  # nu is "sample size" for covariance matrix
+  # S is "covariance"
+  Lambda0<-solve(S)
+  D<-length(m)
+  df<-nu-D-1
+  stopifnot(df>0)
+  infos<-rWishart(N,df,Lambda0)
+  covs<-apply(infos,3,solve)
+  print(covs)
+  #return(covs)
+  #returns vectorized represented matrices
+  #convert back to list of matrices
+  covs<-lapply(1:N,function(n){matrix(covs[,n],nrow=D)})
+  for(i in 1:N){
+    print(dim(covs[[i]]))
+  }
+  means<-lapply(covs,function(Sigma){rmvnorm(1,m,Sigma/k)})
+  #res<-Map(function(x,y){list(mean=x,cov=y)},means,covs)
+  res<-list(means=means,covs=covs)
+  #return(res)
+}
+# test the function using strongly informative prior
+vals<-rNIW(3,5,10,10,matrix(c(1,.5,.5,1),nrow=2))
+```
+
+```{r}
+dp_gmm<-function(N,
+  # return N samples from DP mixture of gaussians
 ```
 
 ```{r}
