@@ -32,3 +32,6 @@ vignettes/*.pdf
 
 # Mac temp files
 *.DS_Store
+
+# Hide markdown generated files
+*.html
