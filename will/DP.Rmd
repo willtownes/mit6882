@@ -88,38 +88,38 @@ visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,K=100){
 Next let's try simulating individual data points from a dirichlet process gaussian mixture model. The "N" data points come from an infinite mixture of gaussians in the following way. An infinite number of (mean, covariance) parameters are sampled from the base distribution (in reality truncated to K sets of parameters). An infinite number (actually, truncated to K) of weights are sampled from the stick breaking process. Then, we sample "N" times with replacement from the sets of (mean,covariance) parameters. Finally, a single data point is simulated from each of these sets. Conditional on cluster membership, a point is independently drawn from a gaussian.
 
 ```{r}
-rNIW<-function(N,m,k,nu,S){
-  # return N samples from the normal-inverse wishart distribution
-  # m is mean
-  # k is "sample size" for mean
-  # nu is "sample size" for covariance matrix
-  # S is "covariance"
-  Lambda0<-solve(S)
-  D<-length(m)
-  df<-nu-D-1
+rNW<-function(m,k,df,precision_matrix){
+  # return a single sample from the normal-wishart distribution
+  # m is mean parameter
+  # k is related to "sample size" for mean. Large value==high confidence in m
+  # precision_matrix is inverse of the covariance matrix
+  # df is "sample size" for covariance matrix. Large value==high confidence
+  # probability model:
+  # Lambda ~ Wishart(precision_matrix,df)
+  # equivalently, Sigma=Lambda^{-1}~ Inverse Wishart(S,nu=df+D+1) 
+  # where D is dimensionality
+  # mu|Sigma ~ Normal(m,(1/k)*S)
+  #Lambda0<-solve(S)
   stopifnot(df>0)
-  infos<-rWishart(N,df,Lambda0)
-  covs<-apply(infos,3,solve)
-  print(covs)
-  #return(covs)
-  #returns vectorized represented matrices
-  #convert back to list of matrices
-  covs<-lapply(1:N,function(n){matrix(covs[,n],nrow=D)})
-  for(i in 1:N){
-    print(dim(covs[[i]]))
-  }
-  means<-lapply(covs,function(Sigma){rmvnorm(1,m,Sigma/k)})
-  #res<-Map(function(x,y){list(mean=x,cov=y)},means,covs)
-  res<-list(means=means,covs=covs)
-  #return(res)
+  D<-length(m)
+  stopifnot(all(dim(precision_matrix)==D))
+  nu<-df+D+1
+  Lambda<-drop(rWishart(1,df,precision_matrix))
+  mean_sim<-drop(rmvnorm(1,m,solve(Lambda)/k))
+  return(list(mean=mean_sim,precision=Lambda))
 }
 # test the function using strongly informative prior
-vals<-rNIW(3,c(5,-5),10,10,matrix(c(1,.5,.5,1),nrow=2))
+nsim<-1000
+vals<-replicate(nsim,rNW(c(5,-5),10,10,matrix(c(1,.5,.5,1),nrow=2)),simplify=FALSE)
+rowMeans(sapply(vals,function(x){x$mean})) #should be (5,-5)
+#empirical mean of precision matrices should be matrix(10,5,5,10)
+Reduce("+",lapply(vals,function(x){x$precision}))/nsim
 ```
 
 ```{r}
-dp_gmm<-function(N,
+dp_gmm<-function(N,NULL){
   # return N samples from DP mixture of gaussians
+}
 ```
 
 ```{r}
