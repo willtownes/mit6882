@@ -114,7 +114,7 @@ rNIW<-function(N,m,k,nu,S){
   #return(res)
 }
 # test the function using strongly informative prior
-vals<-rNIW(3,5,10,10,matrix(c(1,.5,.5,1),nrow=2))
+vals<-rNIW(3,c(5,-5),10,10,matrix(c(1,.5,.5,1),nrow=2))
 ```
 
 ```{r}
