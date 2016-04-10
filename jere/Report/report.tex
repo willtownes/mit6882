@@ -12,6 +12,7 @@
 \bibliographystyle{unsrtnat}
 
 \usepackage{amsmath, amssymb}
+\usepackage{mathtools}
 \usepackage{algorithm, algpseudocode}
 
 \usepackage{hyperref}
@@ -48,6 +49,7 @@
 % flow chart
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows}
+\usetikzlibrary{bayesnet}
 
 % attach code
 \usepackage{listings}
@@ -138,12 +140,182 @@ Boston, MA 02115 \\
 
 \subsection{Model}
 
+Classic view:
+\begin{alignat*}{3}
+& G_0 | \gamma, H && \sim DP(\gamma, H) \\
+& G_j | \alpha_0, G_0 && \sim DP(\alpha_0, G_0) \\
+& \theta_{ji} | G_j && \sim G_j \\
+& x_{ji} | \theta_{ji} && \sim F(\theta_{ji})
+\end{alignat*}
 
-\subsection{Application to 2-dimensional clustering}
+where $P \sim DP(\alpha, G)$ adopts the stick breaking representation w.p. 1:
+\begin{align*}
+P &= \sum_{k=1}^\infty \pi_k \delta_{\phi_k} \qquad \mbox{where:} 
+\qquad
+\pi_k \sim GEM(\alpha), \quad \phi_k  \sim G
+\end{align*}
 
-\section{References}
+Alternatively, one may describe the generative processes of $\pi_k$ and $\theta_k$ separately as:
 
-\section{References}
+\begin{alignat*}{3}
+& \bpi_0 | \gamma && \sim GEM(\gamma) 
+\qquad\qquad && \theta_k | H \sim H 
+\\
+& \bpi_j | \alpha_0, \bpi_0 && \sim DP(\alpha_0, \bpi_0) \\ \\
+& z_{ji} | \bpi_j && \sim \bpi_j \\
+& 
+x_{ji} | z_{ji}, (\theta_{k})_{k=1}^\infty && \sim F(\theta_{z_{ji}})
+\end{alignat*}
+
+\begin{figure}[!h]
+      \centering
+\begin{subfigure}[b]{0.3\textwidth}
+\begin{tikzpicture}[scale = 0.5]
+        \node[latent] (H) {$H$} ; %
+        \node[latent, right=of H] (G0) {$G_0$} ; %
+        \node[latent, above=of G0] (gamma) {$\gamma$} ; %        
+        \node[latent, right=of G0] (Gj) {$G_j$} ; %
+        \node[latent, right=of Gj] (theta) {$\theta_{ji}$} ; %
+        \node[latent, above=of Gj] (alpha) {$\alpha_0$} ; %                
+        \node[obs, right=of theta] (x) {$x_{ji}$} ; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=0.12cm] {plate1} {(theta) (x)} {$i = 1\dots I_j$}; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=0.12cm] {plate2} {(Gj) (plate1)} {$j = 1\dots J$}; %
+        \edge {H} {G0} ; %
+        \edge {G0} {Gj} ; %
+        \edge {Gj} {theta} ; %        
+        \edge {theta} {x} ; %
+        \edge {gamma} {G0} ; %
+        \edge {alpha} {Gj} ; %        
+\end{tikzpicture}            
+\caption{Hierarchical Dirichlet Process}
+\end{subfigure}
+
+\begin{subfigure}[b]{0.3\textwidth}
+\begin{tikzpicture}[scale = 0.5]
+        \node[latent] (G0) {$\bpi_0$} ; %
+        \node[latent, below=of G0] (H) {$H$} ; %
+        \node[latent, above=of G0] (gamma) {$\gamma$} ; %        
+        \node[latent, right=of G0] (Gj) {$\bpi_j$} ; %
+        \node[latent, right=of Gj] (z) {$z_{ji}$} ; %
+        \node[latent, below=of z] (theta) {$\theta_{k}$} ; %                                
+        \node[latent, above=of Gj] (alpha) {$\alpha_0$} ; %                
+        \node[obs, right=of z] (x) {$x_{ji}$} ; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=0.12cm] {plate1} {(z) (x)} {$i = 1\dots I_j$}; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=0.12cm] {plate2} {(Gj) (plate1)} {$j = 1\dots J$}; %
+        \edge {G0} {Gj} ; %
+        \edge {Gj} {z} ; %        
+        \edge {z} {x} ; %
+        \edge {gamma} {G0} ; %
+        \edge {alpha} {Gj} ; %        
+        \edge {H} {theta} ; %                
+        \edge {theta} {x} ; %       
+\end{tikzpicture}      
+\caption{Hierarchical Dirichlet Process}
+\end{subfigure}      
+      \caption{Hierarchical Dirichlet Process}
+\end{figure}
+
+
+\subsection{Inference}
+Assuming conjugacy between $H$ and $F$ \footnote{so we can integrate out the mixture component parameters} and holding $(\gamma, \alpha_0)$ fixed, we now describe a simplied Gibbs approach to sample parameters $(z_{ji}, m_{jk}, \bpi_0)$ from the Chinese Restaurant Franchise (see Appendix \ref{sec:CRF}) representation of the posterior, where the parameter $z_{ji}$ are refered to respectively as customer-specific dish assignment, $m_{jk}$ as  dish-specific table count, and $\pi_0$ as global dish distribution. This particular method is  referred to as "direct assignment" in \cite{teh_hierarchical_2006} since it circumvented the issue of bookkeeping for every $t_{ij}$ (customer-specific table assignment) and $k_{jt}$ (table-specific dish assignment) variables.
+
+In each Gibbs iteration, denote $f_k^{-x_{ji}}(x_{ji}) = 
+\frac{\int f(\bx|\theta_k) h(\theta_k) d_{\theta_k}}
+{\int f(\bx_{-(ji)}|\theta_k) h(\theta_k) d_{\theta_k}}$ the conditional distribution $x_{ji} | \bx_{-(ji)}$ under $\theta = \theta_k$, and assume there are currently $K$ dishes and $T$ tables, we sample $(z_{ji}, m_{jk}, \bpi_0)$ iteratively as:
+\begin{enumerate}
+\item Sample $z_{ji} = k | \bz_{-(ji)}, \bm, \bpi_0$ from the distribution:
+\begin{align*}
+z_{ji} = k | \bz_{-(ji)}, \bm, \bpi_0 \propto 
+\left\{\begin{matrix*}[l]
+f_k^{-x_{ji}}(x_{ji}) * (n_{jk}^{-(ji)} + \alpha_0 \pi_{0, k})  & k \leq K
+\\ 
+f_{K+1}^{-x_{ji}}(x_{ji}) * \alpha_0 \pi_{0, u}   & k = K+1
+\end{matrix*}\right.
+\end{align*}
+\item Sample $m_{jk} = m | \bz, \bm_{-(jk)}, \bpi_0$, by setting $m_{jk} = \sum_{i} I(t_{ji} = k)$ as in \cite{fox_bayesian_2009},
+where $t_{ji}$ is sampled from:
+\begin{align*}
+t_{ji} = t | k_{jt} = k, \bt_{-(ji)}, \bpi_0 \propto
+\left\{\begin{matrix*}[l]
+n_{jt}^{-(ji)}  & t \leq T
+\\ 
+\alpha_0 \pi_{0, k}  & t = T+1
+\end{matrix*}\right.
+\end{align*}
+
+\item Sample $\bpi_0$ from distribution:
+\begin{align*}
+\bpi_0 & \sim Dir(m_1, \dots, m_K, \gamma)
+\end{align*}
+\end{enumerate}
+
+
+
+\begin{algorithm}[H]
+\caption{HDP, Gibbs Sampler through Direct Assignment}
+\label{alg:MKL}
+\begin{algorithmic}[1]
+\Procedure{{\tt hdp\_gibbs\_ds}}{$\bK$, $\by$, $(\tau, \mu, \sigma)$}
+\State $\balpha^0=\bzero$
+
+\For{$p=1$ to ${\tt MAX\_ITER}$}
+\State 
+$\balpha_0^{p} = (1-\frac{\mu}{\sigma})\balpha^{p-1} - \frac{1}{\sigma n}(\bK\balpha^{p-1} - \by) $
+\State 
+$\balpha^p = \bS_{\frac{\tau}{\sigma}}(K, \balpha_0^{p})$
+\EndFor
+\State \Return $f^{\tt MAX\_ITER} = (\balpha^{\tt MAX\_ITER})^T\bk$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Application: Clustering Hierarchical Gaussian Data}
+Consider mixture of Gaussian data $\bx = \{ \bx_1, \dots, \bx_K \}$ with $\bx_k \stackrel{iid}{\sim} MVN(\btheta_{k, 2 \times 1}, \bI_{2 \times 2})$ with unknown mean $\btheta$. Assuming diffused Gaussian prior $\btheta \sim N(\bzero, \sigma^2 \bI)$, the form of likelihood $F$ and base measure $H$ are:
+\begin{align*}
+f(x_{ji} | \btheta_k ) 
+&\propto 
+exp(-\frac{1}{2} (x_{ji} - \btheta_k)^T(x_{ji} - \btheta_k))
+\\
+h(\btheta_k) 
+&\propto 
+exp(-\frac{1}{2\sigma^2}\btheta_k^T\btheta_k)
+\end{align*}
+Then $f_k^{x_{ji}}(x_{ji})$ should be:
+\begin{align*}
+f_k^{x_{ji}}(x_{ji}) &= \frac{1}{2\pi} 
+\frac{\frac{1}{\sigma^2} + n_{jk}^{-(ji)}}{\frac{1}{\sigma^2} + n_{jk}}
+\end{align*}
+
+
+\section{HDP for Hidden Markov Model}
+
+
+\newpage
+
+\appendix
+
+\section{Chinese Restaurant Franchise}\label{sec:CRF}
+A hierarchical analogy of Chinese Restaurant Process, the Chinese Restaurant Franchise offers a convenient scheme to sample from the posterior of cluster-specific $\theta$'s in HDP. This process draw below analogy:
+\begin{itemize}
+\item $H$ as the dish distribution for all possible dishes in the world, with the types of possible dishes being $(\theta_k)_{k=1}^\infty$.
+\item  $G_0 \sim DP(\gamma, H)$ as the dish distribution for the franchise
+\item $G_j \sim DP(\alpha_0, G_0)$ as the dish distribution for restaurant $j$ in the franchise
+\item $\psi_{jt} \sim G_0$ as the dish served at table $t$ in restaurant $j$.\\ $k_{jt} \sim \pi_0$ as the index of dish choice for this table.
+\item $\theta_{ji} \sim G_j$ as the dish will be enjoyed by customer $i$ in restaurant $j$. \\
+$t_{ji} \sim \pi_j$ as the index of table choice for this customer.
+\end{itemize}
+Integrating over $G_j$, the sampling scheme for subject-specific dish $\theta_{ji} \sim G_j$ is:
+\begin{align*}
+\theta_{ji} | \btheta_{j(-i)}, \alpha_0, G_0 \sim 
+\sum_{k=1}^K \frac{n_{jt.}}{\alpha_0 + n_{j..}} \delta_{\psi_{jt}} + 
+\frac{\gamma}{n_{j..} + \gamma} G_0
+\end{align*}
+Integrating over $G_0$, the sampling scheme for table-specific dish $\psi_{jt} \sim G_0$ is:
+\begin{align*}
+\psi_{jk} | \Psi_{j(-k)}, \gamma, H \sim 
+\sum_{k=1}^K \frac{m_{.k}}{\gamma + m_{..}} \delta_{\theta_{k}} + 
+\frac{\gamma}{m_{..} + \gamma} H
+\end{align*}
 
 
 \clearpage

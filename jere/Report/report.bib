@@ -1,56 +1,27 @@
-@article{jordan-mkl-2004,
-  title   = "Multiple kernel learning, conic duality, and the smo algorithm",
-  author  = "F Bach and G Lanckriet and M Jordan",
-  journal = "ACM International Conference Proceeding Series",
-  volume  = "69",
-  year    = 2004
+@article{teh_hierarchical_2006,
+	title = {Hierarchical {Dirichlet} {Processes}},
+	volume = {101},
+	issn = {0162-1459},
+	url = {http://www.jstor.org/stable/27639773},
+	abstract = {We consider problems involving groups of data where each observation within a group is a draw from a mixture model and where it is desirable to share mixture components between groups. We assume that the number of mixture components is unknown a priori and is to be inferred from the data. In this setting it is natural to consider sets of Dirichlet processes, one for each group, where the well-known clustering property of the Dirichlet process provides a nonparametric prior for the number of mixture components within each group. Given our desire to tie the mixture models in the various groups, we consider a hierarchical model, specifically one in which the base measure for the child Dirichlet processes is itself distributed according to a Dirichlet process. Such a base measure being discrete, the child Dirichlet processes necessarily share atoms. Thus, as desired, the mixture models in the different groups necessarily share mixture components. We discuss representations of hierarchical Dirichlet processes in terms of a stick-breaking process, and a generalization of the Chinese restaurant process that we refer to as the "Chinese restaurant franchise." We present Markov chain Monte Carlo algorithms for posterior inference in hierarchical Dirichlet process mixtures and describe applications to problems in information retrieval and text modeling.},
+	number = {476},
+	urldate = {2016-03-23},
+	journal = {Journal of the American Statistical Association},
+	author = {Teh, Yee Whye and Jordan, Michael I. and Beal, Matthew J. and Blei, David M.},
+	year = {2006},
+	pages = {1566--1581}
 }
 
-@article{micchelli-convex-2005,
-  title   = "Learning the Kernel Function via Regularization",
-  author  = "C Micchelli and M Pontil",
-  journal = "Journal of Machine Learning Research",
-  volume  = "6",
-  year    = 2005,
-  pages   = "1099–1125"
+@phdthesis{fox_bayesian_2009,
+	type = {Thesis},
+	title = {Bayesian nonparametric learning of complex dynamical phenomena},
+	copyright = {http://dspace.mit.edu/handle/1721.1/7582},
+	url = {http://dspace.mit.edu/handle/1721.1/55111},
+	abstract = {The complexity of many dynamical phenomena precludes the use of linear models for which exact analytic techniques are available. However, inference on standard nonlinear models quickly becomes intractable. In some cases, Markov switching processes, with switches between a set of simpler models, are employed to describe the observed dynamics. Such models typically rely on pre-specifying the number of Markov modes. In this thesis, we instead take a Bayesian nonparametric approach in defining a prior on the model parameters that allows for flexibility in the complexity of the learned model and for development of efficient inference algorithms. We start by considering dynamical phenomena that can be well-modeled as a hidden discrete Markov process, but in which there is uncertainty about the cardinality of the state space. The standard finite state hidden Markov model (HMM) has been widely applied in speech recognition, digital communications, and bioinformatics, amongst other fields. Through the use of the hierarchical Dirichlet process (HDP), one can examine an HMM with an unbounded number of possible states. We revisit this HDPHMM and develop a generalization of the model, the sticky HDP-HMM, that allows more robust learning of smoothly varying state dynamics through a learned bias towards self-transitions. We show that this sticky HDP-HMM not only better segments data according to the underlying state sequence, but also improves the predictive performance of the learned model. Additionally, the sticky HDP-HMM enables learning more complex, multimodal emission distributions.},
+	language = {eng},
+	urldate = {2016-03-23},
+	school = {Massachusetts Institute of Technology},
+	author = {Fox, Emily Beth},
+	year = {2009},
+	file = {Full Text PDF:/Users/Jeremiah/Library/Application Support/Zotero/Profiles/9brk52ti.default/zotero/storage/4DWAM8MG/Fox - 2009 - Bayesian nonparametric learning of complex dynamic.pdf:application/pdf;Snapshot:/Users/Jeremiah/Library/Application Support/Zotero/Profiles/9brk52ti.default/zotero/storage/XH5BDJXB/55111.html:text/html}
 }
-
-@article{mosci-prox-2010,
-  title   = "Solving Structured Sparsity Regularization with Proximal Methods",
-  author  = "S Mosci and L Rosasco and M Santoro and A Verri and S Villa",
-  journal = "Machine Learning and Knowledge Discovery in Databases",
-  volume  = "II",
-  month   = SEP,
-  year    = 2010,
-  pages   = "418",
-}
-
-@techreport{rosasco-prox-2009,
-  author      = {L Rosasco and S Mosci and M Santoro and A Verri and S Villa},
-  title       = {Iterative Projection Methods for Structured Sparsity Regularization},
-  institution = {MIT},
-  year        = 2009,
-  type        = {Technical Report},
-  source      = {\url{https://dspace.mit.edu/bitstream/handle/1721.1/49428/MIT-CSAIL-TR-2009-050.pdf}}
-}
-
-@article{Zou-2005,
-  title   = "Regularization and variable selection via the elastic net",
-  author  = "H Zou and T Hastie",
-  journal = "J. R. Statist. Soc. B",
-  volume  = "67, Part 2",
-  pages   = "301–320",
-  year    = 2005
-}
-
-@article{Xin-2013,
-  title   = "Soft Margin Multiple Kernel Learning",
-  author  = "X Xu and I Tsang and D Xu",
-  journal = "IEEE Transactions on Neural Networks and Learning Systems",
-  volume  = "24",
-  pages   = "749-761",
-  year    = 2013
-}
-
-
-
