@@ -280,10 +280,12 @@ h(\btheta_k)
 &\propto 
 exp(-\frac{1}{2\sigma^2}\btheta_k^T\btheta_k)
 \end{align*}
-Then $f_k^{x_{ji}}(x_{ji})$ should be:
+Then $f_k^{-x_{ji}}(x_{ji})$ should be:
 \begin{align*}
-f_k^{x_{ji}}(x_{ji}) &= \frac{1}{2\pi} 
-\frac{\frac{1}{\sigma^2} + n_{jk}^{-(ji)}}{\frac{1}{\sigma^2} + n_{jk}}
+f_k^{-x_{ji}}(x_{ji}) & \sim 
+N( \frac{n_{k}^{-(ji)}\sigma^2}{ n_{k}^{-(ji)}\sigma^2 + 1} 
+\bar{\bx}_k^{-(ji)}, 
+(1 + \frac{\sigma^2}{n_{k}^{-(ji)} \sigma^2 + 1} ) \bI)
 \end{align*}
 
 

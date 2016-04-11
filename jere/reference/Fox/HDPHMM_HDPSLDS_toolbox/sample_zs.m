@@ -110,7 +110,6 @@ for ii=data_struct(1).test_cases  % those sequences for which z_{1:T} is unknown
             INDS(ii).obsIndzs(jj,kk).inds = sparse(indSeq(:,jj,kk)');
         end
     end
-
 end
 
 for ii=setdiff(1:length(data_struct),data_struct(1).test_cases) % for sequences ii with fixed z_{1:T}
