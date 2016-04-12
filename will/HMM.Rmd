@@ -1,0 +1,48 @@
+---
+title: "Hidden Markov Model"
+author: "Will Townes"
+date: "April 11, 2016"
+output: html_document
+---
+
+```{r}
+library(expm)
+library(ggplot2)
+```
+
+Let $z_t$ denote the hidden mode sequence. Each $z_t$ is a categorical random variable pointing to one of the L possible modes. Conditional on $z_t$, we observe the continuous variable $x_t$. The first model we examine sets L=2 with the hidden states "Big" ("B") and "Small" ("S"). We set the transition probabilities as follows:
+$$P(z_t="B"|z_{t-1}="B") = .99$$
+$$P(z_t="S"|z_{t-1}="B") = .01$$
+$$P(z_t="B"|z_{t-1}="S") = .05$$
+$$P(z_t="S"|z_{t-1}="S") = .95$$
+The emission probabilities are set as follows:
+$$P(x_t|z_t="B")=\mathcal{N}(5,2)$$
+$$P(x_t|z_t="S")=\mathcal{N}(-5,2)$$
+
+```{r}
+# transition matrix
+transition<-matrix(c(.99,.01,.05,.95),nrow=2) #premultiply by indicator to get new vals
+stationary_dist<-eigen(transition)$vectors[,1]
+stationary_dist/sum(stationary_dist)
+transition%^%100
+#reveals stationary distribution is c(.83,.17)
+rownames(transition)<-colnames(transition)<-c("B","S")
+L<-nrow(transition) #2
+Tmax<-1000
+#z<-matrix(0,nrow=L,ncol=Tmax) #each column is indicator of true state
+# if z[,t] = c(1,0) this means "B"
+# if z[,t] = c(0,1) this means "S"
+#z[,1]<-c(0,1)
+z<-rep(NA,Tmax)
+z[1]<-"S"
+for(t in 2:Tmax){
+  z[t]<-sample(c("B","S"),1,prob=transition[,z[t-1]])
+}
+table(z)/Tmax #should resemble stationary distribution
+mu_vals_map<-list(B=5,S=-5)
+x<-sapply(z,function(q){rnorm(1,mean=mu_vals_map[[q]],sd=sqrt(2))})
+plotdat<-data.frame(index=1:Tmax,x=x,z=z)
+ggplot(data=plotdat)+geom_point(aes(x=index,y=x,colour=z))
+```
+
+The simulated data shows the correct pattern matching with the stationary distribution desired. We will now write a sampler to sample from the posterior given the data.
