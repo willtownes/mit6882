@@ -136,9 +136,20 @@ ggplot(data=data.frame(vals),aes(x=X1,y=X2))+geom_point(size=.5)+geom_density2d(
 #ggsave("DP_GMM.pdf")
 ```
 
-### Collapsed Sampler (via Chinese Restaurant Process?)
+### Gibbs Sampler for Inferring Model Parameters
 
-```{r}
-#for rmvt sampling from multivariate t, use type="shifted" to match notation of Murphy book
+From Murphy book, we know that if the data $x_i$ are iid multivariate normally distributed with parameters $\mu$ and $\Sigma$ and if $(\mu,\Sigma)$ are jointly distributed as normal-inverse wishart having parameters $(m_0,\kappa_0,\nu_0,S_0)$ then the posterior for $(\mu,\Sigma)|x_1,..x_n$ is normal-inverse wishart with parameters:
+$$m_n = \frac{\kappa_0 m_0 + \sum_{i=1}^N x_i}{\kappa_N}$$
+$$\kappa_N = \kappa_0+N$$
+$$\nu_N = \nu_0+N$$
+$$S_N = S_0+S+\kappa_0 m_0 m_0' - \kappa_N m_N m_N'$$
+$$S = \sum_{i=1}^N x_i x_i'$$
 
-```
+The Gibbs sampler alternates between sampling from the full conditionals of $\mu,\Sigma$ for each cluster (conditional on cluster membership, the prior is the base measure and the data are the points assigned to that cluster), and sampling from the DP posterior given the model parameters. 
+
+The blocked sampler is described in the Hjort et al book, in particular Ch. 7: "Nonparametric Bayes Applications to Biostatistics" by David Dunson. First, we allocate each data point to one of the $L$ possible clusters (L is the truncation level). Let $Z_i$ be the indicator of cluster membership for the $i^{th}$ data point. Then the full conditional for each $Z_i$ is a categorical distribution. The prior probability of $P(Z_i=h)$ is designated as $\pi_h$, which comes from the stick weights. The full conditional probability of $Z_i=h$ is given by:
+$$P(Z_i=h|rest) = \frac{\pi_h N(x_i|z_i=h,\mu_h,\Sigma_h)}{\sum_{z_i=r}^L \pi_r N(x_i|z_i=r,\mu_r,\Sigma_r)}$$
+Note that the full distribution is then given by:
+$$P(z_i|rest) = 
+for $h=1,...L$.
+
