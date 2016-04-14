@@ -8,7 +8,7 @@ HDP <-
     # initialization
     z_init = NULL, m_init = NULL, pi_init = NULL,
     # MCMC parameter
-    iter_max = 2e3,
+    iter_max = 1e4,
     # utility
     J_init = c("random", "kmeans")[1]
   ){
@@ -83,7 +83,7 @@ HDP <-
       m_iter[[ii]] <- m_cur <- m_new
       pi_iter[[ii]] <- pi_cur <- pi_new
       
-      if (ii %% 1 == 0){
+      if (ii %% 10 == 1){
         plot(x, col = z_cur, 
              main = paste0(ii, ", K = ", length(m_cur))
         )
@@ -98,7 +98,7 @@ HDP <-
     
     #### 3. Return ####
     sim_mat_emp <- 
-      lapply(1:nrow(ii), 
+      lapply(1:1000, 
              function(i)
                outer(z_iter[i, ], z_iter[i, ], "==")
       ) %>% Reduce("+", .) %>% 
