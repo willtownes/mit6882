@@ -217,7 +217,9 @@ x_{ji} | z_{ji}, (\theta_{k})_{k=1}^\infty && \sim F(\theta_{z_{ji}})
 
 
 \subsection{Inference}
-Assuming conjugacy between $H$ and $F$ \footnote{so we can integrate out the mixture component parameters} and holding $(\gamma, \alpha_0)$ fixed, we now describe a simplied Gibbs approach to sample parameters $(z_{ji}, m_{jk}, \bpi_0)$ from the Chinese Restaurant Franchise (see Appendix \ref{sec:CRF}) representation of the posterior, where the parameter $z_{ji}$ are refered to respectively as customer-specific dish assignment, $m_{jk}$ as  dish-specific table count, and $\pi_0$ as global dish distribution. This particular method is  referred to as "direct assignment" in \cite{teh_hierarchical_2006} since it circumvented the issue of bookkeeping for every $t_{ij}$ (customer-specific table assignment) and $k_{jt}$ (table-specific dish assignment) variables.
+Assuming conjugacy between $H$ and $F$ \footnote{so we can integrate out the mixture component parameters} and holding $(\gamma, \alpha_0)$ fixed, 
+
+we now describe a simplied Gibbs approach to sample parameters $(z_{ji}, m_{jk}, \bpi_0)$ from the Chinese Restaurant Franchise (see Appendix \ref{sec:CRF}) representation of the posterior, where the parameter $z_{ji}$ are refered to respectively as customer-specific dish assignment, $m_{jk}$ as  dish-specific table count, and $\pi_0$ as global dish distribution. This particular method is  referred to as "direct assignment" in \cite{teh_hierarchical_2006} since it circumvented the issue of bookkeeping for every $t_{ij}$ (customer-specific table assignment) and $k_{jt}$ (table-specific dish assignment) variables.
 
 In each Gibbs iteration, denote $f_k^{-x_{ji}}(x_{ji}) = 
 \frac{\int f(\bx|\theta_k) h(\theta_k) d_{\theta_k}}
@@ -232,8 +234,8 @@ f_k^{-x_{ji}}(x_{ji}) * (n_{jk}^{-(ji)} + \alpha_0 \pi_{0, k})  & k \leq K
 f_{K+1}^{-x_{ji}}(x_{ji}) * \alpha_0 \pi_{0, u}   & k = K+1
 \end{matrix*}\right.
 \end{align*}
-\item Sample $m_{jk} = m | \bz, \bm_{-(jk)}, \bpi_0$, by setting $m_{jk} = \sum_{i} I(t_{ji} = k)$ as in \cite{fox_bayesian_2009},
-where $t_{ji}$ is sampled from:
+\item Sample $m_{jk} = m | \bz, \bm_{-(jk)}, \bpi_0$, by setting $m_{jk} = \sum_{i} I(t_{ji} = t_{new}|k_{jt_{new}} = k)$,
+we can sample $t_{ji}$ from:
 \begin{align*}
 t_{ji} = t | k_{jt} = k, \bt_{-(ji)}, \bpi_0 \propto
 \left\{\begin{matrix*}[l]
@@ -241,6 +243,10 @@ n_{jt}^{-(ji)}  & t \leq T
 \\ 
 \alpha_0 \pi_{0, k}  & t = T+1
 \end{matrix*}\right.
+\end{align*}
+or as in \cite{fox_bayesian_2009}, sample $I(t_{ji} = t_{new}|k_{jt_{new}} = k)$ directly from:
+\begin{align*}
+Bern \Big(\frac{\alpha_0 \pi_{0, k}}{n_{jk} + \alpha_0 \pi_{0, k}} \Big) 
 \end{align*}
 
 \item Sample $\bpi_0$ from distribution:

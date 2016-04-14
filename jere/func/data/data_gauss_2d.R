@@ -3,10 +3,12 @@ library(magrittr)
 
 gauss_2d <- 
   function(k = 10, t = 3, d = 2, 
-           sig_k = 1e-2, sig_t = 1e-3)
+           sig_k = 1e-2, sig_t = 1e-3, 
+           mean_obs = 40)
   {
     # k: number of clusters
-    # n: number of sub-clusters in each cluster
+    # t: number of sub-clusters in each cluster
+    # mean_obs: mean number of obs in each sub-cluster
     
     # 1. determine cluster/subcluster mean
     mu_k <- cbind(runif(k), runif(k))
@@ -18,7 +20,7 @@ gauss_2d <-
     
     # 2. generate data for each sub-cluster
     n_t <- nrow(mu_t)
-    N <- rpois(n_t, 40)
+    N <- rpois(n_t, mean_obs)
     sample <-       
       lapply(1:n_t,
              function(i) 
