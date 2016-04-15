@@ -8,7 +8,7 @@ HDP <-
     # initialization
     z_init = NULL, m_init = NULL, pi_init = NULL,
     # MCMC parameter
-    iter_max = 1e4,
+    iter_max = 2e3,
     # utility
     J_init = c("random", "kmeans")[1]
   ){
@@ -98,11 +98,13 @@ HDP <-
     
     #### 3. Return ####
     sim_mat_emp <- 
-      lapply(1:1000, 
+      lapply(1:(nrow(z_iter)-1),
              function(i)
                outer(z_iter[i, ], z_iter[i, ], "==")
       ) %>% Reduce("+", .) %>% 
       divide_by(nrow(z_iter))
-    image(t(sim_mat_emp[nrow(sim_mat_emp):1, ]))
     
+    pdf("hdp_eval.pdf", 9, 9)
+    image(t(sim_mat_emp[nrow(sim_mat_emp):1, ]))
+    dev.off()
   }
