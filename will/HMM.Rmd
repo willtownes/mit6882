@@ -52,8 +52,9 @@ The simulated data shows the correct pattern matching with the stationary distri
 ```{r}
 # original transition[i,j] is P(z_{t+1}=j|z_t=i) (standard form)
 # in Murphy book this is called Psi
-tlps<-log(t(transition)) 
-#now tlps[i,j] is log P(z_{t+1}=i|z_t=j)
+tlps<-log(transition)
+ttlps<-t(tlps)
+#now ttlps[i,j] is log P(z_{t+1}=i|z_t=j)
 #taking transpose facilitates R's vector*matrix recycling
 #compute all emission log-probabilities
 elps<-vapply(categs,function(q){dnorm(x,mean=mu_vals_map[[q]],sd=sqrt(2),log=TRUE)},FUN.VALUE=rep(0.0,Tmax))
@@ -70,8 +71,25 @@ for(t in Tmax:2){
   # more stable? log-scale version, also underflowed
   # msg_b[(t-1),]<-transition %*% exp(elps[t,]+log(msg_b[t,]))
   # even more stable approach, use logsumexp function
-  msg_b[(t-1),]<-colLogSumExps(msg_b[t,]+elps[t,]+tlps)
+  msg_b[(t-1),]<-colLogSumExps(msg_b[t,]+elps[t,]+ttlps)
   #note the use of vector recycling!!
   # msg_b[t,] is 2x1, elps[t,] is 2x1, tlps is 2x2!!
 }
+#compute forward messages
+msg_a<-matrix(NA,nrow=Tmax,ncol=L)
+colnames(msg_a)<-categs
+#compute stationary distribution as marginal log probs to initialize
+mlpz<-log(eigen(t(transition))$vectors[,1]) 
+msg_a[1,]<-elps[1,]+mlpz
+for(t in 2:Tmax){
+  msg_a[t,]<-elps[t,]+colLogSumExps(msg_a[(t-1),]+tlps) #vector recycling!
+}
+msg_gam<-msg_a+msg_b #unnormalized log-probs
+msg_gam_Z<-rowLogSumExps(msg_gam) #calculate normalizing constant
+msg_gam<- msg_gam - msg_gam_Z #normalize via log-scale
+#find predicted states most likely, doesn't require normalization!
+zpreds<-max.col(msg_gam)
+zpreds<-vapply(zpreds,function(q){categs[q]},FUN.VALUE="S")
+table(zpreds,z)
 ```
+We see in the above table that everything was correctly classified by the Forward-Backward Algorithm!
