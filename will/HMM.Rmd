@@ -8,7 +8,7 @@ output: html_document
 ```{r}
 library(expm)
 library(ggplot2)
-library(matrixStats)
+source("util.R") #forward/backward message calculations
 ```
 
 Let $z_t$ denote the hidden mode sequence. Each $z_t$ is a categorical random variable pointing to one of the L possible modes. Conditional on $z_t$, we observe the continuous variable $x_t$. The first model we examine sets L=2 with the hidden states "Big" ("B") and "Small" ("S"). We set the transition probabilities as follows:
@@ -19,6 +19,8 @@ $$P(z_t="S"|z_{t-1}="S") = .95$$
 The emission probabilities are set as follows:
 $$P(x_t|z_t="B")=\mathcal{N}(5,2)$$
 $$P(x_t|z_t="S")=\mathcal{N}(-5,2)$$
+
+The first step is to create some simulated data from this HMM.
 
 ```{r}
 # transition matrix, rows sum to one
@@ -31,10 +33,6 @@ categs<-c("B","S")
 rownames(transition)<-colnames(transition)<-categs
 L<-nrow(transition) #2
 Tmax<-1000
-#z<-matrix(0,nrow=L,ncol=Tmax) #each column is indicator of true state
-# if z[,t] = c(1,0) this means "B"
-# if z[,t] = c(0,1) this means "S"
-#z[,1]<-c(0,1)
 z<-rep(NA,Tmax)
 z[1]<-"S"
 for(t in 2:Tmax){
@@ -47,46 +45,15 @@ plotdat<-data.frame(index=1:Tmax,x=x,z=z)
 ggplot(data=plotdat)+geom_point(aes(x=index,y=x,colour=z))
 ```
 
-The simulated data shows the correct pattern matching with the stationary distribution desired. We will now write a sampler to sample from the posterior given the data.
+The simulated data shows the correct pattern matching with the stationary distribution desired. We will now use the forward-backward algorithm to infer the hidden states and see if it matches with the true hidden states.
 
 ```{r}
-# original transition[i,j] is P(z_{t+1}=j|z_t=i) (standard form)
-# in Murphy book this is called Psi
-tlps<-log(transition)
-ttlps<-t(tlps)
-#now ttlps[i,j] is log P(z_{t+1}=i|z_t=j)
-#taking transpose facilitates R's vector*matrix recycling
 #compute all emission log-probabilities
 elps<-vapply(categs,function(q){dnorm(x,mean=mu_vals_map[[q]],sd=sqrt(2),log=TRUE)},FUN.VALUE=rep(0.0,Tmax))
 # prev. line is a Tmax by L matrix
 # each row is one time step.
 # values are on the log-scale
-# compute backward messages
-msg_b<-matrix(NA,nrow=Tmax,ncol=L)
-colnames(msg_b)<-categs
-msg_b[Tmax,]<-0 #messages on log-scale
-for(t in Tmax:2){
-  #below formula modified from Murphy p. 611, underflowed/failed
-  #msg_b[(t-1),]<-transition %*% (exp(elps[t,])*msg_b[t,])
-  # more stable? log-scale version, also underflowed
-  # msg_b[(t-1),]<-transition %*% exp(elps[t,]+log(msg_b[t,]))
-  # even more stable approach, use logsumexp function
-  msg_b[(t-1),]<-colLogSumExps(msg_b[t,]+elps[t,]+ttlps)
-  #note the use of vector recycling!!
-  # msg_b[t,] is 2x1, elps[t,] is 2x1, tlps is 2x2!!
-}
-#compute forward messages
-msg_a<-matrix(NA,nrow=Tmax,ncol=L)
-colnames(msg_a)<-categs
-#compute stationary distribution as marginal log probs to initialize
-mlpz<-log(eigen(t(transition))$vectors[,1]) 
-msg_a[1,]<-elps[1,]+mlpz
-for(t in 2:Tmax){
-  msg_a[t,]<-elps[t,]+colLogSumExps(msg_a[(t-1),]+tlps) #vector recycling!
-}
-msg_gam<-msg_a+msg_b #unnormalized log-probs
-msg_gam_Z<-rowLogSumExps(msg_gam) #calculate normalizing constant
-msg_gam<- msg_gam - msg_gam_Z #normalize via log-scale
+msg_gam<-forward_backward(transition,elps)
 #find predicted states most likely, doesn't require normalization!
 zpreds<-max.col(msg_gam)
 zpreds<-vapply(zpreds,function(q){categs[q]},FUN.VALUE="S")
