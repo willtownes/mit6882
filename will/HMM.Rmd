@@ -60,3 +60,11 @@ zpreds<-vapply(zpreds,function(q){categs[q]},FUN.VALUE="S")
 table(zpreds,z)
 ```
 We see in the above table that everything was correctly classified by the Forward-Backward Algorithm!
+
+Next we try to use Algorithm 10 "blocked Gibbs" from Fox's thesis (p. 118) to get samples from the joint posterior of the hidden states given the observed states. The idea is to first compute the backward messages, then sequentially sample hidden states in a forward direction.
+
+```{r}
+msg_b<-comp_bk_msg(transition,elps) #compute backward messages
+pi0<-mlpz<-log(get_stationary_dist(transition)) 
+  res[1,]<-elps[1,]+mlpz
+```

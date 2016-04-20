@@ -1,7 +1,14 @@
 #utility function used by other scripts
 library(matrixStats) #logSumExp functions
+library(RSpectra) #faster eigenvalue decomposition
 
 ### Hidden Markov Model Functions
+get_stationary_dist<-function(transition,logScale=TRUE){
+  # given a transition matrix, compute the implied stationary distribution
+  # stopifnot(all(rowSums(transition)==1))
+  eigen(t(transition))$vectors[,1]
+}
+
 comp_bk_msg<-function(transition,elps,res=NULL){
   # transition is the L by L transition matrix for the hidden state markov chain
   # assume transition rows sum to one (standard from for stochastic matrix)
@@ -52,7 +59,7 @@ comp_fwd_msg<-function(transition,elps,res=NULL){
   tlps<-log(transition)
   if(is.null(res)) res<-matrix(0.0,nrow=Tmax,ncol=L)
   #compute stationary distribution as marginal log probs to initialize
-  mlpz<-log(eigen(t(transition))$vectors[,1]) 
+  mlpz<-log(get_stationary_dist(transition)) 
   res[1,]<-elps[1,]+mlpz
   for(t in 2:Tmax){
     res[t,]<-elps[t,]+colLogSumExps(res[(t-1),]+tlps) #vector recycling!
