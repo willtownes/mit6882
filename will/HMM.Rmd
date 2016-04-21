@@ -8,7 +8,7 @@ output: html_document
 ```{r}
 library(expm)
 library(ggplot2)
-source("util.R") #forward/backward message calculations
+source("util.R") #all HMM functions defined here
 ```
 
 Let $z_t$ denote the hidden mode sequence. Each $z_t$ is a categorical random variable pointing to one of the L possible modes. Conditional on $z_t$, we observe the continuous variable $x_t$. The first model we examine sets L=2 with the hidden states "Big" ("B") and "Small" ("S"). We set the transition probabilities as follows:
@@ -56,7 +56,7 @@ elps<-vapply(categs,function(q){dnorm(x,mean=mu_vals_map[[q]],sd=sqrt(2),log=TRU
 msg_gam<-forward_backward(transition,elps)
 #find predicted states most likely, doesn't require normalization!
 zpreds<-max.col(msg_gam)
-zpreds<-vapply(zpreds,function(q){categs[q]},FUN.VALUE="S")
+zpreds<-hidden_int2char(zpreds,categs)
 table(zpreds,z)
 ```
 We see in the above table that everything was correctly classified by the Forward-Backward Algorithm!
@@ -64,7 +64,18 @@ We see in the above table that everything was correctly classified by the Forwar
 Next we try to use Algorithm 10 "blocked Gibbs" from Fox's thesis (p. 118) to get samples from the joint posterior of the hidden states given the observed states. The idea is to first compute the backward messages, then sequentially sample hidden states in a forward direction.
 
 ```{r}
-msg_b<-comp_bk_msg(transition,elps) #compute backward messages
-pi0<-mlpz<-log(get_stationary_dist(transition)) 
-  res[1,]<-elps[1,]+mlpz
+msg_b<-comp_bk_msg(transition,elps) #compute backward messages, logscale by default
+pi0<-log(get_stationary_dist(transition))
+nRep<-10
+zs<-replicate(nRep,sample_hidden_states(msg_b,elps,transition,pi0))
+# zs is now a Tmax by nRep matrix
+# find which state most likely in samples at each time step
+zs_pred<-apply(zs,1,function(q){which.max(tabulate(q))})
+zs_pred<-hidden_int2char(zs_pred,categs)
+table(z,zs_pred)
+```
+
+The sampled paths always chose the true path. This is a "unit test" since the data were so clean. Let's try again with some data where the hidden state is not so obvious given the observed state.
+
+```{r}
 ```

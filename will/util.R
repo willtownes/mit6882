@@ -1,12 +1,21 @@
 #utility function used by other scripts
 library(matrixStats) #logSumExp functions
-library(RSpectra) #faster eigenvalue decomposition
+if(require(RSpectra)){
+  FASTEIG=TRUE
+} else {
+  FASTEIG=FALSE
+}
 
 ### Hidden Markov Model Functions
-get_stationary_dist<-function(transition,logScale=TRUE){
+get_stationary_dist<-function(transition){
   # given a transition matrix, compute the implied stationary distribution
   # stopifnot(all(rowSums(transition)==1))
-  eigen(t(transition))$vectors[,1]
+  if(FASTEIG && nrow(transition)>2){
+    evec<-eigs(t(transition),1) #fast method using RSpectra
+  } else {
+    evec<-eigen(t(transition))$vectors[,1] #slow method using base
+  }
+  evec/sum(evec) #normalize
 }
 
 comp_bk_msg<-function(transition,elps,res=NULL){
@@ -93,6 +102,42 @@ forward_backward<-function(transition,elps,logscale=TRUE,normalize=FALSE,res=NUL
     return(msg_gam)
   } else {
     return(exp(msg_gam))
+  }
+}
+
+hidden_int2char<-function(hidden_ints,categs){
+  # given a sequence of integers representing a hidden state path,
+  # and a character vector "categs" with hidden state labels
+  # returns the same hidden state path in character form for easier interpretation
+  vapply(hidden_ints,function(q){categs[q]},FUN.VALUE="S")
+}
+
+sample_hidden_states<-function(msg_b,elps,transition,pi0=NULL,categs=NULL){
+  # inputs: msg_b is a Tmax by L matrix of backward messages on log scale
+  # Tmax is number of time steps, L is number of hidden states
+  # elps is a Tmax by L matrix of emission log-probabilities
+  # transition is the transition matrix for the hidden state markov chain
+  # pi0 is a L-vector of marginal hidden state log-probabilities (optional)...
+  # ...if not provided it is calculated from transition matrix stationary distribution
+  # if categs provided, converts sample path from integer to category label
+  Tmax<-nrow(elps)
+  L<-ncol(elps)
+  tlps<-log(transition)
+  if(is.null(pi0)) pi0<-log(get_stationary_dist(transition))
+  zs<-rep(0,Tmax) #will use numeric index
+  #compute sampled hidden state sequence
+  msg_a<-elps[1,]+pi0+msg_b[1,]
+  msg_a<-msg_a - logSumExp(msg_a) #normalized, still on log scale
+  zs[1]<-sample.int(L,1,prob=exp(msg_a))
+  for(t in 2:Tmax){
+    msg_a<- tlps[zs[t-1],] + elps[t,] + msg_b[t,]
+    msg_a<-msg_a - logSumExp(msg_a)
+    zs[t]<-sample.int(L,1,prob=exp(msg_a))
+  }
+  if(is.null(categs)){
+    return(zs)
+  } else {
+    return(hidden_int2char(zs,categs))
   }
 }
 
