@@ -1,0 +1,14 @@
+---
+title: "Linear Dynamical System"
+author: "Will Townes"
+date: "April 21, 2016"
+output: html_document
+---
+
+### Generating Fake Data
+
+The linear dynamical system model is given by the following recursive equations:
+$$x_t|x_{t-1}\sim\mathcal{N}(A_t x_{t-1},\Sigma_t)$$
+$$y_t|x_t\sim\mathcal{N}(C_t x_t,R_t)$$
+
+In Fox et al, they set $C_t=C$ and $R_t=R$ to be constant across time and without loss of generality force $C=[I_d,0]$ where $d$ is the dimensionality of $y_t$. Hence the key parameters that switch are $A_t,\Sigma_t$ and the key parameter that is constant for all time is $R$. 
