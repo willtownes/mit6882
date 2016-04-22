@@ -150,6 +150,29 @@ The Gibbs sampler alternates between sampling from the full conditionals of $\mu
 The blocked sampler is described in the Hjort et al book, in particular Ch. 7: "Nonparametric Bayes Applications to Biostatistics" by David Dunson. First, we allocate each data point to one of the $L$ possible clusters (L is the truncation level). Let $Z_i$ be the indicator of cluster membership for the $i^{th}$ data point. Then the full conditional for each $Z_i$ is a categorical distribution. The prior probability of $P(Z_i=h)$ is designated as $\pi_h$, which comes from the stick weights. The full conditional probability of $Z_i=h$ is given by:
 $$P(Z_i=h|rest) = \frac{\pi_h N(x_i|z_i=h,\mu_h,\Sigma_h)}{\sum_{z_i=r}^L \pi_r N(x_i|z_i=r,\mu_r,\Sigma_r)}$$
 Note that the full distribution is then given by:
-$$P(z_i|rest) = 
+$$P(z_i|rest) = $$
 for $h=1,...L$.
 
+```{r}
+# truncated stick breaking posterior
+rstick_post<-function(alpha,categ_counts){
+  # returns a truncated stick breaking vector of weights
+  # alpha is (prior) concentration parameter
+  # large alpha-> few clusters
+  # small alpha-> many clusters
+  # categ_counts is a vector of sufficient statistics
+  # categ_counts[h] is number of data points observed in category "h"
+  # categ_counts = sum_{i=1}^n I(Z_i=h)
+  K<-length(categ_counts)
+  #compute parameter for second part of stick breaking betas
+  #ss_gt = sum_{i=1}^n I(Z_i>h) for each of the categoris h=1...K
+  ss_gt<-sum(categ_counts)-cumsum(categ_counts)
+  betas<-rbeta(K,1+categ_counts,alpha+ss_gt)
+  betas[K]<-1 #truncation part
+  lbetas<-log(betas)
+  log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:K-1])
+  return(exp(lbetas+log_cumsum_1minus_betas))
+}
+# test this function
+stopifnot(sum(rstick_post(1,c(5,3,8))==1))
+```
