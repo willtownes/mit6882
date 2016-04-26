@@ -32,6 +32,7 @@ green<-genCluster(20,"3",c(3,-3),sigma=matrix(c(1,.8,.8,1),nrow=2))
 black<-genCluster(20,"4",c(-3,-3),sigma=matrix(c(1,-.8,-.8,1),nrow=2))
 dat<-rbind(red,blue,green,black)
 ggplot(data=dat,aes(x=X1,y=X2,color=id))+geom_point(size=3)+theme_bw()+geom_density2d(h=4)+xlim(-6,6)+ylim(-6,6)
+ggplot(data=dat,aes(x=X1,y=X2))+geom_point(size=3)+theme_bw()+xlim(-6,6)+ylim(-6,6)
 ```
 
 ### Sampler from a Dirichlet Process
