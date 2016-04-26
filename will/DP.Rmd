@@ -8,6 +8,7 @@ output: html_document
 ```{r}
 library(mvtnorm)
 library(ggplot2)
+library(car) #for plotting ellipses
 #library(plyr)
 #library(MCMCpack)
 ```
@@ -30,35 +31,58 @@ green<-genCluster(20,"3",c(3,-3),sigma=matrix(c(1,.8,.8,1),nrow=2))
 #lower left- negative correlation
 black<-genCluster(20,"4",c(-3,-3),sigma=matrix(c(1,-.8,-.8,1),nrow=2))
 dat<-rbind(red,blue,green,black)
-ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
+ggplot(data=dat,aes(x=X1,y=X2,color=id))+geom_point(size=3)+theme_bw()+geom_density2d(h=4)+xlim(-6,6)+ylim(-6,6)
+ggplot(data=dat,aes(x=X1,y=X2))+geom_point(size=3)+theme_bw()+xlim(-6,6)+ylim(-6,6)
 ```
 
 ### Sampler from a Dirichlet Process
 
 ```{r}
-rstick<-function(K,alpha){
+# rstick<-function(K,alpha){
+#   # returns a truncated stick breaking vector of weights
+#   # alpha is concentration parameter
+#   # K is the number of weights, set K to a large value to more closely approximate the true stick breaking distribution
+#   # large alpha-> few clusters
+#   # small alpha-> many clusters
+#   betas<-rbeta(K,1,alpha)
+#   betas[K]<-1 #truncation part
+#   lbetas<-log(betas)
+#   log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:K-1])
+#   return(exp(lbetas+log_cumsum_1minus_betas))
+# }
+# # test this function
+# stopifnot(sum(rstick(1,10))==1)
+
+rstick<-function(alpha,categ_counts){
   # returns a truncated stick breaking vector of weights
-  # alpha is concentration parameter
-  # K is the number of weights, set K to a large value to more closely approximate the true stick breaking distribution
+  # alpha is (prior) concentration parameter
   # large alpha-> few clusters
   # small alpha-> many clusters
-  betas<-rbeta(K,1,alpha)
+  # categ_counts is a vector of sufficient statistics
+  # categ_counts[h] is number of data points observed in category "h"
+  # categ_counts = sum_{i=1}^n I(Z_i=h)
+  # set categ_counts=rep(0,K) to sample from the prior.
+  K<-length(categ_counts)
+  #compute parameter for second part of stick breaking betas
+  #ss_gt = sum_{i=1}^n I(Z_i>h) for each of the categoris h=1...K
+  ss_gt<-sum(categ_counts)-cumsum(categ_counts)
+  betas<-rbeta(K,1+categ_counts,alpha+ss_gt)
   betas[K]<-1 #truncation part
   lbetas<-log(betas)
   log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:K-1])
   return(exp(lbetas+log_cumsum_1minus_betas))
 }
 # test this function
-stopifnot(sum(rstick(1,10))==1)
+stopifnot(sum(rstick_post(1,c(5,3,8))==1))
 
-rdp<-function(K,alpha,H){
-  # return samples from a dirichlet process with concentration parameter alpha and base measure H.
+rdp_prior<-function(K,alpha,H){
+  # return samples from a dirichlet process prior with concentration parameter alpha and base measure H.
   # uses stick breaking method rather than chinese restaurant process
   # truncates stick breaking after K clusters
   # calling H(K) should produce K random samples from distribution H
   # returns a list of probabilities and atoms
   # ie, one sample from rdp is a probability measure over the atoms
-  pi_vals<-rstick(K,alpha)
+  pi_vals<-rstick(alpha,rep(0,K))
   atoms<-H(K)
   return(list(probs=pi_vals,atoms=atoms))
 }
@@ -66,7 +90,7 @@ rdp<-function(K,alpha,H){
 visualize_dp_1d<-function(alpha,H=rnorm,H_density=dnorm,K=100){
   # handy function for visualizing 1-dimensional DPs
   # "H_density" should be the density version of "H" for plotting
-  test_dp<-data.frame(rdp(K,alpha,H))
+  test_dp<-data.frame(rdp_prior(K,alpha,H))
   ggbase<-ggplot(data=test_dp,aes(x=atoms,ymax=probs,ymin=0))+geom_linerange(size=2)+stat_function(fun=H_density,linetype=2)+ylab("probability density or mass")+theme_bw()
   return(ggbase)
 }
@@ -112,12 +136,12 @@ Reduce("+",lapply(vals,function(x){x$precision}))/nsim
 Next let's try simulating individual data points from a dirichlet process gaussian mixture model. The "N" data points come from an infinite mixture of gaussians in the following way. An infinite number of (mean, covariance) parameters are sampled from the base distribution (in reality truncated to K sets of parameters). An infinite number (actually, truncated to K) of weights are sampled from the stick breaking process. Then, we sample "N" times with replacement from the sets of (mean,covariance) parameters. Finally, a single data point is simulated from each of these sets. Conditional on cluster membership, a point is independently drawn from a gaussian.
 
 ```{r}
-dp_gmm<-function(N,K,alpha,m,k,df,precision_matrix,verbose=FALSE){
+dp_gmm_prior<-function(N,K,alpha,m,k,df,precision_matrix,verbose=FALSE){
   # return N samples from DP mixture of gaussians
   # K is truncation level of stick breaking process (upper bound on #clusters)
   # alpha is concentration parameter 
   #gaussian base measure hyperparams m,k,df, and precision matrix defined in rNW function
-  probs<-rstick(K,alpha)
+  probs<-rstick(alpha,rep(0,K))
   params_unique<-replicate(K,rNW(m,k,df,precision_matrix),simplify=FALSE)
   params<-sample(params_unique,N,replace=TRUE,prob=probs)
   vals<-vapply(params,function(x){rmvnorm(1,x$mean,x$cov)},rep(0.0,length(m)))
@@ -125,7 +149,7 @@ dp_gmm<-function(N,K,alpha,m,k,df,precision_matrix,verbose=FALSE){
   attr(vals,"nclust")<-length(unique(params))
   return(t(vals))
 }
-vals<-dp_gmm(1000,100,1,c(5,-5),.1,3,matrix(c(1,.5,.5,1),nrow=2),verbose=TRUE)
+vals<-dp_gmm_prior(1000,100,1,c(5,-5),.1,3,matrix(c(1,.5,.5,1),nrow=2),verbose=TRUE)
 #colMeans(vals) #should be about c(5,-5)
 plot(vals)
 hist(vals[,1],probability=TRUE) #marginal of simulated data
@@ -142,7 +166,7 @@ From Murphy book, we know that if the data $x_i$ are iid multivariate normally d
 $$m_n = \frac{\kappa_0 m_0 + \sum_{i=1}^N x_i}{\kappa_N}$$
 $$\kappa_N = \kappa_0+N$$
 $$\nu_N = \nu_0+N$$
-$$S_N = S_0+S+\kappa_0 m_0 m_0' - \kappa_N m_N m_N'$$
+$$S_N = \left(S_0^{-1}+S+\kappa_0 m_0 m_0' - \kappa_N m_N m_N'\right)^{-1}$$
 $$S = \sum_{i=1}^N x_i x_i'$$
 
 The Gibbs sampler alternates between sampling from the full conditionals of $\mu,\Sigma$ for each cluster (conditional on cluster membership, the prior is the base measure and the data are the points assigned to that cluster), and sampling from the DP posterior given the model parameters. 
@@ -154,25 +178,28 @@ $$P(z_i|rest) = $$
 for $h=1,...L$.
 
 ```{r}
-# truncated stick breaking posterior
-rstick_post<-function(alpha,categ_counts){
-  # returns a truncated stick breaking vector of weights
-  # alpha is (prior) concentration parameter
-  # large alpha-> few clusters
-  # small alpha-> many clusters
-  # categ_counts is a vector of sufficient statistics
-  # categ_counts[h] is number of data points observed in category "h"
-  # categ_counts = sum_{i=1}^n I(Z_i=h)
-  K<-length(categ_counts)
-  #compute parameter for second part of stick breaking betas
-  #ss_gt = sum_{i=1}^n I(Z_i>h) for each of the categoris h=1...K
-  ss_gt<-sum(categ_counts)-cumsum(categ_counts)
-  betas<-rbeta(K,1+categ_counts,alpha+ss_gt)
-  betas[K]<-1 #truncation part
-  lbetas<-log(betas)
-  log_cumsum_1minus_betas<-c(0,cumsum(log(1-betas))[1:K-1])
-  return(exp(lbetas+log_cumsum_1minus_betas))
-}
-# test this function
-stopifnot(sum(rstick_post(1,c(5,3,8))==1))
+# inputs:
+# y is a matrix where each row is a data point
+# alpha is the concentration parameter
+# H is the base distribution
+alpha<-1
+y<-as.matrix(dat[,1:2])
+k0<-.01 #diffuse prior for means
+D<-ncol(y)
+nu0<-D+2 #diffuse prior for covariance matrix
+# set other hyperparameters based on empirical bayes approach
+ymean<-colMeans(y)
+ycov<-cov(y)
+m0<-ymean
+S0_inv<-solve(ycov)
+# set base measure also by empirical bayes if not specified
+if(is.null(H)) H<-function(n){rmvnorm(n,mean=ymean,sigma=S0)}
+#update hyperparameters based on data
+N<-nrow(y)
+kn<-k0+N
+mn <- (k0*m0+colSums(y))/kn
+nun<-nu0+N
+Sn<-solve(S0_inv+t(y)%*%y+k0*(m0 %o% m0) - kn*(mn %o% mn))
+ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
+ellipse(mn,Sn,radius=1,grid=FALSE,add=TRUE)
 ```
