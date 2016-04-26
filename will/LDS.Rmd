@@ -5,6 +5,10 @@ date: "April 21, 2016"
 output: html_document
 ---
 
+```{r}
+library(mvtnorm)
+```
+
 ### Generating Fake Data
 
 The linear dynamical system model is given by the following recursive equations:
@@ -12,3 +16,51 @@ $$x_t|x_{t-1}\sim\mathcal{N}(A_t x_{t-1},\Sigma_t)$$
 $$y_t|x_t\sim\mathcal{N}(C_t x_t,R_t)$$
 
 In Fox et al, they set $C_t=C$ and $R_t=R$ to be constant across time and without loss of generality force $C=[I_d,0]$ where $d$ is the dimensionality of $y_t$. Hence the key parameters that switch are $A_t,\Sigma_t$ and the key parameter that is constant for all time is $R$. 
+
+For the purposes of visualization, we produce data from a projectile trajectory. We follow the discussion in Section 1.3.2 in *Bayesian Time Series Models* by Barber et al. According to a discretization of Newton's Laws of motion, acceleration is constant. Let $q(t)$ be the two-vector of position, $v(t)$ be the velocity vector, and $a=(0,-9.8)$ be the acceleration. If a projectile is launched from the origin $q_0=(0,0)$ with initial velocity $v_0=(10,10)$ (ie the initial angle is $\theta=\pi/4$, we expect it to follow a parabolic path to a maximum height of 
+$$y_{max} = \frac{\Vert v_0 \Vert^2\sin^2(\theta)}{2\Vert a\Vert}$$
+
+A discretized version of the trajectory is:
+$$q(t+k) = q(t) + k v(t) + \frac{k^2}{2} a$$
+$$v(t+k) = v(t) + k a(t) $$
+Where $k$ is the time gap between observations (assumed to be constant for simplicity).
+Let $x(t) = (q(t),v(t))$ (a 4-vector). We can write $x(t) = A x(t-1) + B$ where
+$$A = \begin{pmatrix} I & kI\\0 I\end{pmatrix}$$
+$$B = \begin{pmatrix} \frac{1}{2}k^2 Ia\\ kIa$$
+Hence
+$$(x_t|x_{t-1})\sim\mathcal{N}\left(Ax_{t-1}+B,\mathbf{0}\right)$$
+(ie, the motion is deterministic so there is zero variance)
+which is a linear dynamical system. Assume we observe only a noisy version of the position, $y(t)$. Hence, the observation model is
+$$(y_t|x_t)\sim\mathcal{N}\left(Cx_t,R\right)$$
+Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$ is an isotropic noise model for simplicity (ie, that it is a scalar times the identity). The simulated data is shown below
+
+```{r}
+meas_err_sd<-200
+k<-5 #number of seconds between observations
+init_pos<-c(0,0)
+init_velo<-c(250,250)
+Tmax<-60 #number of seconds to run the simulation
+iter_max<-floor(Tmax/k)
+a<-c(0,-9.8) #acceleration
+x<-matrix(NA,nrow=iter_max,ncol=4) #position and velocity
+colnames(x)<-c("pos_horiz","pos_vert","velo_horiz","velo_vert")
+y<-matrix(NA,nrow=iter_max,ncol=2) #observed position
+colnames(y)<-c("pos_horiz","pos_vert")
+x[1,]<-c(init_pos,init_velo)
+y[1,]<-init_pos
+A<-diag(4)
+A[1:2,3:4]<-k*diag(2)
+B<-rbind(.5*k^2*diag(2),k*diag(2))%*%a
+C<-cbind(diag(2),matrix(0,nrow=2,ncol=2))
+R<-meas_err_sd^2*diag(2)
+
+for(t in 2:iter_max){
+  x[t,]<-A%*%x[(t-1),] + B
+  y[t,]<-rmvnorm(1,drop(C%*%x[t,]),R)
+}
+plot(x[,1],x[,2],type="l")
+points(y[,1],y[,2])
+```
+
+The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles.
+
