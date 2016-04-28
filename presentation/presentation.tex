@@ -1,0 +1,440 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass{beamer}
+
+\mode<presentation> {
+
+% The Beamer class comes with a number of default slide themes
+% which change the colors and layouts of slides. Below this is a list
+% of all the themes, uncomment each in turn to see what they look like.
+
+%\usetheme{default}
+%\usetheme{AnnArbor}
+%\usetheme{Antibes}
+%\usetheme{Bergen}
+%\usetheme{Berkeley}
+\usetheme{Berlin}
+%\usetheme{Boadilla}
+%\usetheme{CambridgeUS}
+%\usetheme{Copenhagen}
+%\usetheme{Darmstadt}
+%\usetheme{Dresden}
+%\usetheme{Frankfurt}
+%\usetheme{Goettingen}
+%\usetheme{Hannover}
+%\usetheme{Ilmenau}
+%\usetheme{JuanLesPins}
+%\usetheme{Luebeck}
+%\usetheme{Madrid}
+%\usetheme{Malmoe}
+%\usetheme{Marburg}
+%\usetheme{Montpellier}
+%\usetheme{PaloAlto}
+%\usetheme{Pittsburgh}
+%\usetheme{Rochester}
+%\usetheme{Singapore}
+%\usetheme{Szeged}
+%\usetheme{Warsaw}
+
+% As well as themes, the Beamer class has a number of color themes
+% for any slide theme. Uncomment each of these in turn to see how it
+% changes the colors of your current slide theme.
+
+%\usecolortheme{albatross}
+\usecolortheme{beaver}
+%\usecolortheme{beetle}
+%\usecolortheme{crane}
+%\usecolortheme{dolphin}
+%\usecolortheme{dove}
+%\usecolortheme{fly}
+%\usecolortheme{lily}
+%\usecolortheme{orchid}
+%\usecolortheme{rose}
+%\usecolortheme{seagull}
+%\usecolortheme{seahorse}
+%\usecolortheme{whale}
+%\usecolortheme{wolverine}
+
+%\setbeamertemplate{footline} % To remove the footer line in all slides uncomment this line
+%\setbeamertemplate{footline}[page number] % To replace the footer line in all slides with a simple slide count uncomment this line
+
+%\setbeamertemplate{navigation symbols}{} % To remove the navigation symbols from the bottom of all slides uncomment this line
+}
+
+% math definition
+\newcommand{\indep}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+
+
+%
+\usepackage{graphicx} % Allows including images
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+\usepackage{comment}
+
+%macros from Bob Gray
+\usepackage{"./macro/GrandMacros"}
+\usepackage{"./macro/Macro_BIO235"}
+
+\usepackage[normalem]{ulem}
+
+% tikz
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Short title]{Posterior Predictive Check for Topic Models} % The short title appears at the bottom of every slide, the full title is only on the title page
+
+\author{Will Townes, Jeremiah Zhe Liu} % Your name
+
+\date{\today} % Date, can be changed to a custom date
+
+\begin{document}
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+\begin{frame}
+\frametitle{Overview} % Table of contents slide, comment this block out to remove it
+\tableofcontents % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%	PRESENTATION SLIDES
+%----------------------------------------------------------------------------------------
+
+
+\section{LDA Review} 
+
+\begin{frame}
+\frametitle{LDA Review: Model}
+M documents (each with $N_d$ words), V vocabulary and K topics
+\begin{alignat*}{4}
+\mbox{Per Topic:} \quad & 
+\bphi_{k, V \times 1} && \stackrel{iid}{\sim} 
+Dir(\bbeta_{V \times 1}) \quad
+&& \mbox{K Word Distributions}
+\\
+\mbox{Per Document:} \quad & 
+\btheta_{d, K \times 1} && \stackrel{iid}{\sim}
+Dir(\balpha_{K \times 1}) \quad
+&& \mbox{M Topic Distributions}
+\\
+\mbox{Per Word:} \quad &
+z_{d, n} && \stackrel{iid}{\sim}
+Mult(\btheta_d) \quad
+&& \mbox{Topic Allocation}
+\\
+&
+w_{d, n} && \stackrel{iid}{\sim}
+Mult(\bphi_{k = z_{d, n}}) \quad
+&& \mbox{Word Allocation}
+\end{alignat*}
+
+\begin{figure}
+    \centering
+    \includegraphics[width = 0.5\linewidth]{"./plot/LDA"}
+    \caption{Latent Dirichlet Allocation}
+    \label{fig:LDA}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{LDA Review: "Good" Topic Model?}
+Produce topic allocations $z_{n,d}$ that is \textbf{meaningful} and \textbf{accurate} .
+\begin{enumerate}
+\item \textbf{"Meaningful"}: Topics makes sense to human reader
+\begin{itemize}
+\item Need semantic-based metric. See for example:
+
+Chang et al (2009). \textit{Reading tea leaves: How humans interpret
+topic models}. NIPS 21
+\end{itemize}
+
+
+\item \textbf{"Accurate"}: modeling assumptions matches the observed data
+\begin{enumerate}
+\item i.e. $w_{d, n} \stackrel{iid}{\sim} Mult(\bphi_{k = z_{d, n}}), 
+\;
+z_{d, n}\stackrel{iid}{\sim} Mult(\btheta_d)$ \textit{a posteri}
+\item i.e. $w_{d, n} \indep \btheta_d | z_{d, n}$ 
+\item also referred to as \textbf{Multinomial Assumption}
+\end{enumerate}
+\end{enumerate}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{LDA Review: To mess up a LDA...}
+    \begin{figure}
+      \centering
+      \tikz{ %
+        \node[latent] (alpha) {$\alpha$} ; %
+        \node[latent, above = of alpha] (writer) {writer} ; %
+        \node[latent, above = 0.7cm of writer] (time) {time} ; %        
+        \node[latent, right=of alpha] (theta) {$\theta_d$} ; %
+        \node[latent, right=of theta] (z) {$z_{d, n}$} ; %
+        \node[latent, above=of z] (beta) {$\beta$} ; %
+        \node[latent, above right=1.7cm of beta] (phi) {$\phi_k$} ; %        
+        \node[obs, right=of z] (w) {$w_{d, n}$} ; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=0.12cm] {plate1} {(z) (w)} {N}; %
+        \plate[inner sep=0.25cm, xshift=-0.12cm, yshift=-0.1cm] {plate2} {(theta) (plate1)} {M}; %
+        \plate[yshift=0.2cm]{plate3}{(phi)}{K}
+        \edge {alpha} {theta} ; %
+        \edge {theta} {z} ; %
+        \edge {z} {w} ; %
+        \edge {beta} {phi} ; %        
+        \edge {phi} {w} ; %                
+        \edge {writer} {theta} ; %                
+        \edge {time} {theta} ; %                
+        \edge {writer} {phi} ; %                
+        \edge {time} {phi} ; %                
+      }
+    \end{figure}
+
+\end{frame}
+
+
+\section{Posterior Predictive Checking} 
+
+\begin{frame} {How to check this assumption?}
+Posterior Predictive Checks
+\begin{enumerate}
+\item Define $\Msc()$, a \textbf{measure} of the assumption $w_{d, n} \indep \btheta_d | z_{d, n}$.
+\item Generate Data from $\bW^{rep} \sim p(\bW | \bTheta, \bZ, \bPhi)$\\
+{\footnotesize "data that could have been observed if the same experiment was repeated with the same generative model"}
+\item Check if $\Msc(\bW^{obs})$ and $\Msc(\bW^{rep})$ are close using a \textbf{deviation function}.
+\begin{align*}
+D(\bW^{obs}, \bW^{rep}) &= 
+\frac{\Msc(\bW^{obs}) - MEAN[\Msc(\bW^{rep})]}{SD[\Msc(\bW^{rep})]}
+\end{align*}
+\end{enumerate}
+\end{frame}
+
+\subsubsection{Mutual Information} 
+
+\begin{frame}{Measure Input}
+How to check conditional independence of $w$ and $d$ given $z$?
+\begin{itemize}
+\item Define: 
+\begin{itemize}
+\item $W_k = \{w_{n, d} | z_{n, d} = k \}$: words allocated to topic k.
+\item $D_k = \{d | w_{n, d} \in W_k \}$: document index for each $w \in W_k$.
+\end{itemize}
+\item Empirically, knowing $W_k$ gives no information about the documentation label $D_k$.
+\begin{align*}
+P(w, d|k) &= p(w|k) p(d|k)
+\\
+\frac{N(W_k = w, D_k = d)}{|W_k|} &= 
+\frac{N(W_k = w)}{|W_k|}
+\frac{N(D_k = d)}{|W_k|}
+\end{align*}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Measure Output: MI}
+Measure quality for each $\bphi_k$: 
+\begin{itemize}[<+->]
+\item Mutual Information
+\begin{align*}
+MI (W, D|k) &= KL(p(W, D|k) || p(W|k)p(D|k))\\
+&= \sum_w \sum_d p(w, d|k) log \frac{p(w, d|k) }{p(w|k)p(d|k) }
+\end{align*}
+\item aka. difference in uncertainty about $D$, knowing/not knowing $W$.
+\begin{align*}
+MI (W, D|k) &= 
+\sum_d p(d|k)log\frac{1}{ p(d|k)} - 
+\sum_{w,d} p(w, d|k)log\frac{p(w|k)}{ p(w, d | k)}
+\\
+&= H(D|k) - H(D|W, k)
+\end{align*}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{MI as Generalized Correlation}
+\begin{figure}
+    \centering
+    \includegraphics[width = \linewidth]{"./plot/MI"}
+    \caption{Mutual Information v.s. Correlation}
+    \label{fig:MI}
+\end{figure}
+\end{frame}
+
+\subsubsection{Instantaneous Mutual Information} 
+
+\begin{frame}{Measure Output: IMI}
+Measure quality for each $\phi_{k, w}$: 
+\begin{itemize}
+\item Instantaneous Mutual Information
+\begin{align*}
+IMI (W=w, D|k) 
+&= KL(p(W=w, D|k) || p(W=w|k)p(D|k))\\
+&= H(D|k) - H(D|W=w, k) \\
+&= \sum_d p(d|k)log\frac{1}{ p(d|k)} - 
+\sum_{d} p(d|w, k)log\frac{1}{ p(d |w, k)}
+\end{align*}
+\item MI is a weighted sum of IMI
+\begin{align*}
+MI(W, D|k) &= H(D|k) - H(D|W, k) \\
+&= H(D|k) - \sum_w H(D|W=w, k)P(W=w|k)\\
+&= \sum_w IMI (W=w, D|k) * P(W=w|k)
+\end{align*}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Measure Output: IMI}
+Intuition:
+\begin{align*}
+IMI (W=w, D|k) 
+&= \sum_d p(d|k)log\frac{1}{ p(d|k)} - 
+\sum_{d} p(d|w, k)log\frac{1}{ p(d |w, k)}
+\end{align*}
+\begin{itemize}[<+->]
+\item where:
+\begin{itemize}
+\item<1-> $p(d |k)$: any topic-k word appear in document d 
+\item<1-> $p(d |w, k)$: topic-k word w appear in document d
+\end{itemize}
+\item Consider below scenario:
+\begin{itemize}
+\item $w$ appeared in each $d$ with equal frequency (formulaic language):
+$p(d|w, k) = (d|k) \rightarrow IMI = 0$
+\item $w$ appeared only in one document $d=1$:
+$p(d=1|w, k) = 1 \rightarrow H(D|w,k)=0 \rightarrow IMI = H(D|k) $
+\end{itemize}
+
+\end{itemize}
+
+\end{frame}
+
+\subsubsection{Example} 
+
+\begin{frame}
+\begin{figure}
+    \centering
+    \includegraphics[width = \linewidth]{"./plot/fig1_1"}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\begin{figure}
+    \centering
+    \includegraphics[width = \linewidth]{"./plot/fig1_2"}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\begin{figure}
+    \centering
+    \includegraphics[width = \linewidth]{"./plot/fig1_3"}
+\end{figure}
+\end{frame}
+
+\section{Application to Topic Models} 
+
+
+\begin{frame}{Creating a Baseline Discrepancy}
+
+\begin{itemize}
+\item
+  Meaning of ``multinomial assumption''
+\item
+  What exactly is a ``real'' value of IMI here?
+\item
+  How many Gibbs iterations to characterize posterior?
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Computing the MI weights from Gibbs State}
+
+\begin{itemize}
+\item
+  In LDA, the (latent) parameter \(\phi_{wk}=P(w|k)\) controls the
+  weights from computing MI from IMI.
+\item
+  From full conditional, the MLE is: \(\hat{\phi}_{wk} = N(w|k)/N\)
+  where \(N\) is total number of tokens assigned to topic \(k\). Hence,
+  their use of \(N(w|k)\).
+\item
+  Why didn't they use the MAP estimator?
+  \[\tilde{\phi}_{wk} = \frac{\alpha_w+N(w|k)}{\sum_w \alpha_w + N}\]
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Full Mutual Information Analysis}
+
+\begin{itemize}
+
+\item
+  grouping = function(document)
+\item
+  deviance = (observed IMI) - (expected IMI), scaled by stdev.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Calibration and P-values}
+
+\begin{itemize}
+\item
+  p-value is defined here opposite to common use (1-p)
+\item
+  probability of observing a less extreme discrepancy than actual value.
+\item
+  i.e.~many p-values close to one means many extreme discrepancies
+  actually observed (bad fit)
+\item
+  model works well for documents strongly associated to topics.
+\item
+  model works poorly for ambiguous documents.
+\end{itemize}
+
+\end{frame}
+
+\section*{Technical Detail}
+\begin{frame}{Posterior Decomposition of LDA}
+\label{fm:post}
+Holding $\bPhi$ as known:
+\begin{alignat*}{4}
+& \quad \;
+p( \bTheta,\bZ | \bW, \bPhi, \balpha) 
+\\
+& \propto 
+p( \bW | \bTheta,\bZ, \bPhi) 
+&& * p(\bTheta |\balpha)
+\\
+&= 
+p( \bW | \bZ, \bPhi) p(\bZ|\bTheta) 
+&& * p(\bTheta | \balpha)
+\\
+&\propto
+p( \bW | \bZ, \bPhi) && * p(\bTheta |\bZ, \balpha)
+\end{alignat*}
+\end{frame}
+
+
+\end{document} 
+
