@@ -25,21 +25,24 @@ $$q(t+k) = q(t) + k v(t) + \frac{k^2}{2} a$$
 $$v(t+k) = v(t) + k a(t) $$
 Where $k$ is the time gap between observations (assumed to be constant for simplicity).
 Let $x(t) = (q(t),v(t))$ (a 4-vector). We can write $x(t) = A x(t-1) + B$ where
-$$A = \begin{pmatrix} I & kI\\0 I\end{pmatrix}$$
-$$B = \begin{pmatrix} \frac{1}{2}k^2 Ia\\ kIa$$
+$$A = \begin{pmatrix} I & kI\\0 & I\end{pmatrix}$$
+$$B = \begin{pmatrix} \frac{1}{2}k^2 Ia\\ kIa\end{pmatrix}$$
 Hence
-$$(x_t|x_{t-1})\sim\mathcal{N}\left(Ax_{t-1}+B,\mathbf{0}\right)$$
-(ie, the motion is deterministic so there is zero variance)
-which is a linear dynamical system. Assume we observe only a noisy version of the position, $y(t)$. Hence, the observation model is
+$$(x_t|x_{t-1})\sim\mathcal{N}\left(Ax_{t-1}+B,\Sigma\right)$$
+with $\Sigma$ representing random perturbations in motion due to the wind. We set $\Sigma$ to a a diagonal matrix with diagonal elements $(\sigma^2_1,\sigma^2_1,\sigma^2_2,\sigma^2_2)$. This indicates the noise in the velocity part is different than the position part, but the noise is the same in any spatial direction. This is a linear dynamical system. Assume we observe only a noisy version of the position, $y(t)$. Hence, the observation model is
 $$(y_t|x_t)\sim\mathcal{N}\left(Cx_t,R\right)$$
 Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$ is an isotropic noise model for simplicity (ie, that it is a scalar times the identity). The simulated data is shown below
 
 ```{r}
+#inputs
 meas_err_sd<-200
+pos_noise_sd<-10
+velo_noise_sd<-40
 k<-5 #number of seconds between observations
 init_pos<-c(0,0)
 init_velo<-c(250,250)
 Tmax<-60 #number of seconds to run the simulation
+
 iter_max<-floor(Tmax/k)
 a<-c(0,-9.8) #acceleration
 x<-matrix(NA,nrow=iter_max,ncol=4) #position and velocity
@@ -52,10 +55,11 @@ A<-diag(4)
 A[1:2,3:4]<-k*diag(2)
 B<-rbind(.5*k^2*diag(2),k*diag(2))%*%a
 C<-cbind(diag(2),matrix(0,nrow=2,ncol=2))
+Sigma<-diag(c(rep(pos_noise_sd^2,2),rep(velo_noise_sd^2,2)))
 R<-meas_err_sd^2*diag(2)
 
 for(t in 2:iter_max){
-  x[t,]<-A%*%x[(t-1),] + B
+  x[t,]<-rmvnorm(1,drop(A%*%x[(t-1),]+B),Sigma)
   y[t,]<-rmvnorm(1,drop(C%*%x[t,]),R)
 }
 plot(x[,1],x[,2],type="l")
