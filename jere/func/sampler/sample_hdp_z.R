@@ -25,7 +25,8 @@ sample_hdp_z <-
     # invoke custom log-lik func, SLOW
     lik_out <- 
       lik_func(x, z, m, # data & parameter
-               n, d, K) # misc information
+               n, d, K, 
+               sigma_dat = 0.01) # misc information
     lik_val <- lik_out$lik # log likhd
     n_ji <- lik_out$n_ji
     

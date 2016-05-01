@@ -244,7 +244,7 @@ n_{jt}^{-(ji)}  & t \leq T
 \alpha_0 \pi_{0, k}  & t = T+1
 \end{matrix*}\right.
 \end{align*}
-or as in \cite{fox_bayesian_2009}, sample $I(t_{ji} = t_{new}|k_{jt_{new}} = k)$ directly from:
+and as in \cite{fox_bayesian_2009}, sample $I(t_{ji} = t_{new}|k_{jt_{new}} = k)$ directly from:
 \begin{align*}
 Bern \Big(\frac{\alpha_0 \pi_{0, k}}{n_{jk} + \alpha_0 \pi_{0, k}} \Big) 
 \end{align*}
@@ -280,18 +280,18 @@ Consider mixture of Gaussian data $\bx = \{ \bx_1, \dots, \bx_K \}$ with $\bx_k 
 \begin{align*}
 f(x_{ji} | \btheta_k ) 
 &\propto 
-exp(-\frac{1}{2} (x_{ji} - \btheta_k)^T(x_{ji} - \btheta_k))
+exp(-\frac{1}{2 \sigma^2} (x_{ji} - \btheta_k)^T(x_{ji} - \btheta_k))
 \\
 h(\btheta_k) 
 &\propto 
-exp(-\frac{1}{2\sigma^2}\btheta_k^T\btheta_k)
+exp(-\frac{1}{2\sigma_0^2}\btheta_k^T\btheta_k)
 \end{align*}
 Then $f_k^{-x_{ji}}(x_{ji})$ should be:
 \begin{align*}
 f_k^{-x_{ji}}(x_{ji}) & \sim 
-N( \frac{n_{k}^{-(ji)}\sigma^2}{ n_{k}^{-(ji)}\sigma^2 + 1} 
+N( \frac{n_{k}^{-(ji)}\sigma_0^2}{ n_{k}^{-(ji)}\sigma_0^2 + \sigma^2} 
 \bar{\bx}_k^{-(ji)}, 
-(1 + \frac{\sigma^2}{n_{k}^{-(ji)} \sigma^2 + 1} ) \bI)
+(1 + \frac{\sigma_0^2}{n_{k}^{-(ji)} \sigma_0^2 + \sigma^2} ) \bI)
 \end{align*}
 
 

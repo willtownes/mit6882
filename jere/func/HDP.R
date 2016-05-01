@@ -2,7 +2,7 @@
 HDP <- 
   function(
     # data, restaurant number, dish number
-    x, nJ = 1, nK_init = 2,
+    x, nJ = 1, nK_init = 3,
     # DP concentration/base-measure
     gamma = 1, alpha = NULL, lik_func,
     # initialization
@@ -55,7 +55,7 @@ HDP <-
       z_new <-
         sample_hdp_z(
           x, lik_func, gamma, alpha, J,
-          z_cur, m_cur, pi_cur)
+          z= z_cur, m = m_cur, pi = pi_cur)
       
       #remove empty category
       if(length(setdiff(1:max(z_new), unique(z_new))) > 0){
@@ -70,7 +70,7 @@ HDP <-
       m_new <- 
         sample_hdp_m(
           x, lik_func, gamma, alpha, J,
-          z_new, m_cur, pi_cur)
+          z = z_new, m = m_cur, pi = pi_cur)
       
       #### 2.3 pi: dish distribution ====
       pi_new <- 

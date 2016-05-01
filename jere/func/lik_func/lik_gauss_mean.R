@@ -9,6 +9,7 @@ lik_gauss_mean <-
            # misc data information
            n, d, K,
            # prior par 
+           sigma_dat = 0.01, 
            sigma = NULL, log = FALSE){
     # input:
     # > x (n x p):      data
@@ -41,8 +42,8 @@ lik_gauss_mean <-
       lapply(
         1:n, function(i){
           n_obs <- n_ji[i, ]
-          list(mean = sigma * n_obs / (sigma * n_obs + 1), 
-               var =  1 + sigma / (sigma * n_obs + 1)
+          list(mean = sigma * n_obs / (sigma * n_obs + sigma_dat), 
+               var =  sigma_dat * (1 + sigma / (sigma * n_obs + sigma_dat))
           )
         })
     
@@ -56,15 +57,28 @@ lik_gauss_mean <-
                  (sum_k - 
                     matrix((z[i] == K_cat)) %*% t(x[i, ]) ) %>%
                    # add empty "mean" for new class
-                   rbind(t(rep(0, d)))               
+                   rbind(t(rep(0, d)))
                } else {
                  ((#t(sum_k[[ z[i] ]])[rep(1, K), ] - 
                    sum_k - matrix((z[i] == K_cat)) %*% t(x[i, ]))/
-                    (n_k[[ z[i] ]] - (z[i] == K_cat))) %>%
+                    (n_k - (z[i] == K_cat))) %>%
                    # add empty "mean" for new class
                    rbind(t(rep(0, d)))
                }
       )
+    
+    # check if mean are calculated correctly
+    # mean_K <-
+    #   lapply(1:K,
+    #          function(k){
+    #            lapply(mean_ji, function(x) x[k, ]) %>%
+    #              do.call(rbind, .)
+    #          }
+    #   )
+    # plot(x, col = "grey")
+    # text(mean_K[[1]], label = "1")
+    # text(mean_K[[2]], label = "2")
+    # text(mean_K[[3]], label = "3")
     
     # 3. calculate likelihood
     dmvnorm_V <- 
@@ -77,6 +91,12 @@ lik_gauss_mean <-
     lik <- 
       outer(X = 1:n, Y = 1:(K+1), dmvnorm_V)
     if (log) lik <- log(lik)
+    
+    # # examine likelihood allocation
+    # k_id <- 3
+    # plot(x, pch = 19, 
+    #      col = rgb(0,0,0, lik[, k_id]/max(lik[, k_id])))
+    
     # return
     list(lik = lik, n_ji = n_ji)
   }
