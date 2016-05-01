@@ -66,5 +66,8 @@ plot(x[,1],x[,2],type="l")
 points(y[,1],y[,2])
 ```
 
-The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles.
+The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles. We apply the backwards message passing, forwards sampling approach of Fox et al. The backwards message passing algorithm is Algorithm 19 in Fox's thesis.
+
+```{r}
+```
 

@@ -1,0 +1,103 @@
+\documentclass[12pt]{article}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\newcommand{\E}{\mathbb{E}}
+
+\begin{document}
+\title{MIT 6.882 Final Project}
+\author{Jeremiah Zhe Liu,  Will Townes}
+\maketitle
+
+\section{Block Sampling for Linear Dynamical System}
+\subsection{Forward Kalman Filter}
+Let $x_t$ represent the hidden (continuous) state and let $y_t$ represent the noisy observation. Then the linear dynamical system of interest has the following probability model:
+
+\begin{align*}
+p(x_t|x_{t-1}) &= \mathcal{N}(A_t x_{t-1}+B_t,\Sigma_t)\\
+p(y_t|x_t) &= \mathcal{N}(C x_t,R)
+\end{align*}
+
+Following Fox (see thesis section 2.7.5), we set $C = [I_d,0]$ where $d$ is the dimensionality of $y_t$. The key switching parameters are $A_t, B_t$, and $\Sigma_t$ and the key constant parameter is $R$. Note that our model is more general than that of Fox since we allow the presence of the $B_t$ parameter while she sets it to zero. Assuming these dynamical parameters are known, we can use a variant of the Kalman Filter to sample from the posterior of all the $x_t$ states given the observed $y_t$ states. The idea is to first compute backward messages and then sample in a forward pass. First, we derive the recursion for the forward messages.
+
+\begin{align*}
+\alpha_{t+1}(x_{t+1}) &= \left[\int p(x_{t+1}|x_t)\alpha_t(x_t)dx_t\right] p(y_{t+1}|x_{t+1})
+\end{align*}
+
+Ignoring normalizing constants, the integrand depends on the following quantities
+\begin{align*}
+p(x_{t+1}|x_t)&\propto \exp\left\{-\frac{1}{2}(x_{t+1}-Ax_t-B)'\Sigma^{-1}(x_{t+1}-Ax_t-B)\right\}\\
+&\propto \exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}'
+    \begin{pmatrix}\Sigma^{-1} & -\Sigma^{-1}A\\
+    -A'\Sigma^{-1} & A'\Sigma^{-1}A\end{pmatrix}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}
+    + \begin{pmatrix}\Sigma^{-1}B\\-A'\Sigma^{-1}B\end{pmatrix}'\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}\right\}
+\end{align*}
+Assume $\alpha_t(x_t)$ is a known Gaussian density function with offset $\theta^f_{t|t}$ and information matrix $\Lambda^f_{t|t}$. Then Fox shows that
+\[\alpha_t(x_t)\propto\exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}'
+    \begin{pmatrix}0 & 0\\
+    0 & \Lambda^f_{t|t}\end{pmatrix}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}
+    + \begin{pmatrix}0\\ \theta^f_{t|t}\end{pmatrix}'\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}\right\}\]
+The combined density in the integrand is then given by
+\begin{align*}
+p(x_{t+1}|x_t)\alpha_t(x_t)&\propto \exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}'
+    \begin{pmatrix}\Sigma^{-1} & -\Sigma^{-1}A\\
+    -A'\Sigma^{-1} & A'\Sigma^{-1}A + \Lambda^f_{t|t}\end{pmatrix}\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}\right. \ldots\\
+    &~~\ldots+ \left. \begin{pmatrix}\Sigma^{-1}B\\ \theta^f_{t|t}-A'\Sigma^{-1}B\end{pmatrix}'\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}\right\}
+\end{align*}
+We now have the joint distribution of $(x_{t+1},x_t)$ which is in the form of a blocked bivariate Gaussian. The marginal distribution of $x_{t+1}$ is obtained by integrating out $x_t$ using a standard identity:
+\[\int\mathcal{N}^{-1}\left(\begin{pmatrix}x_1\\ x_2\end{pmatrix} ; \begin{pmatrix}\theta_1\\ \theta_2\end{pmatrix}, \begin{pmatrix}\Lambda_{11} & \Lambda_{12} \\ \Lambda{21}& \Lambda_{22}\end{pmatrix}\right)dx_2 = \mathcal{N}^{-1}(x_1;\theta_1-\Lambda_{12}\Lambda_{22}^{-1}\theta_2, ~ \Lambda_{11} - \Lambda_{12}\Lambda_{22}^{-1}\Lambda_{21})\]
+
+Therefore,
+\[\int p(x_{t+1}|x_t)\alpha_t(x_t)dx_t \propto \mathcal{N}^{-1}(x_{t+1};\theta_{t,t+1},\Lambda_{t,t+1})\]
+where
+\begin{align*}
+\theta_{t,t+1} &=\Sigma^{-1}B + \Sigma^{-1}A(A'\Sigma^{-1}A+\Lambda^f_{t|t})^{-1}(\theta^f_{t|t} - A'\Sigma^{-1}B)\\
+\Lambda_{t,t+1} &= \Sigma^{-1} - \Sigma^{-1}A(A'\Sigma^{-1}A+\Lambda^f_{t|t})^{-1}A'\Sigma^{-1}
+\end{align*}
+Notably, our offset term is different from Fox due to the nonzero $B$ but the information matrix is the same. The above update equations can be simplified if $A$ is invertible (cf Fox Algorithm 3). Additionally, it is desirable to enforce symmetry in computing $\Lambda_{t,t+1}$. Set $M_t = (A')^{-1}\Lambda^f_{t|t}A^{-1}$ and $J_t = M_t(M_t+\Sigma^{-1})^{-1}$. Note that $M_t' = M_t$. Then,
+\begin{align*}
+\Lambda_{t,t+1} &= \Sigma^{-1}\left(I - \left(\Sigma^{-1}+(A')^{-1}\Lambda^f_{t|t}A^{-1}\right)^{-1}\Sigma^{-1}\right) = \Sigma^{-1}\left(I - \left(\Sigma^{-1}+M_t\right)^{-1}\Sigma^{-1}\right)\\
+&=\Sigma^{-1}\left(\Sigma^{-1}+M_t\right)^{-1}M_t = \Sigma^{-1}J_t'
+\end{align*}
+This is equivalent to Fox's Algorithm 3 formula, as shown below:
+\begin{align*}
+\Lambda_{t,t+1} &= (I-J_t)M_t(I-J_t)' + J_t\Sigma^{-1}J_t'\\
+ &= (I-J_t)M_t(I-J_t)' + J_t(\Lambda_{t,t+1})\\
+ (I-J_t)\Lambda_{t,t+1} &= (I-J_t)M_t(I-J_t')\\
+ \Lambda_{t,t+1} &= M_t(I-J_t') = M_t-M_tJ_t'\\
+ \Sigma^{-1}J_t' &= M_t-M_tJ_t'\\
+ (\Sigma^{-1} + M_t)J_t' &= M_t\\
+ (\Sigma^{-1}+M_t)(\Sigma^{-1}+M_t)^{-1}M_t &= M_t
+\end{align*}
+Fox's formula is better numerically since it automatically enforces symmetry. By a similar argument, we have a simplified version of the offset parameter:
+\begin{align*}
+\theta^f_{t,t+1} &= \Sigma^{-1}\left(B+\left(\Sigma^{-1}+M_t\right)^{-1}\left((A')^{-1}\theta^f_{t|t} - \Sigma^{-1}B\right)\right)\\
+&= \Sigma^{-1}\left(\left(I-(\Sigma^{-1}+M_t)^{-1}\Sigma^{-1}\right)B + \left(\Sigma^{-1}+M_t\right)^{-1}(A')^{-1}\theta^f_{t|t}\right)\\
+&= \Sigma^{-1}J_t'B + \Sigma^{-1}(\Sigma^{-1}+M_t)^{-1}(A')^{-1}\theta^f_{t|t}\\
+&= \Lambda_{t,t+1}B + (I-J_t)(A')^{-1}\theta^f_{t|t}
+\end{align*}
+This reduces to Fox's formula when $B=\mathbf{0}$ as expected.
+
+The likelihood term is the same as in Fox:
+\[p(y_{t+1}|x_{t+1})\propto\exp\left\{-\frac{1}{2} x_{t+1}'C'R^{-1}Cx_{t+1} + x_{t+1}'C'R^{-1}y_{t+1}\right\}\]
+The combined density is then given by
+\[\alpha_{t+1}(x_{t+1})\propto\exp\left\{-\frac{1}{2}x_{t+1}'\left(\Lambda_{t,t+1}+C'R^{-1}C\right)x_{t+1} + x_{t+1}'\left(\theta_{t,t+1}+C'R^{-1}y_{t+1}\right)\right\}\]
+Therefore the updated filtering information and offset parameters at step (t+1) are:
+\begin{align*}
+\theta^f_{t+1|t+1} &= \theta_{t,t+1} + C'R^{-1}y_{t+1}\\
+%&=\Sigma^{-1}B + \Sigma^{-1}A(A'\Sigma^{-1}A+\Lambda^f_{t|t})^{-1}(\theta^f_{t|t} - A'\Sigma^{-1}B) + C'R^{-1}y_{t+1}\\
+\Lambda^f_{t+1|t+1} &= \Lambda_{t,t+1} + C'R^{-1}C %\\
+%&=\Sigma^{-1} - \Sigma^{-1}A(A'\Sigma^{-1}A+\Lambda^f_{t|t})^{-1}A'\Sigma^{-1}+ C'R^{-1}C
+\end{align*}
+Filtered estimates of $x_{t}|y_{1:t}$ can be obtained from $\E[x_{t}|y_{1:t}] = \hat{x}_{t|t} = \left(\Lambda^f_{t|t}\right)^{-1}\theta^f_{t|t}$ or sampled from the updated density $x_{t}|y_{1:t}\sim\mathcal{N}\left(\hat{x}_{t|t}~,~\left(\Lambda^f_{t|t}\right)^{-1}\right)$
+
+\subsection{Backward Kalman Filter}
+
+To perform smoothing or sampling based on the joint distribution of the hidden states given the observed states, we also need to compute backward messages, defined as:
+\[\beta_t(x_t) = p(y_{(t+1):T}|x_t)\]
+If we already know $\beta_{t+1}(x_{t+1})\sim\mathcal{N}^{-1}(x_t;~\theta^b_{t|t+1},~\Lambda^b_{t|t+1})$, then
+\[\beta_t(x_t) \propto \int p(x_{t+1}|x_t)p(y_{t+1}|x_{t+1})\beta_{t+1}(x_{t+1})dx_{t+1}\]
+
+
+\end{document}
