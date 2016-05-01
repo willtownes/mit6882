@@ -46,7 +46,7 @@ p(x_{t+1}|x_t)\alpha_t(x_t)&\propto \exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t+1
     &~~\ldots+ \left. \begin{pmatrix}\Sigma^{-1}B\\ \theta^f_{t|t}-A'\Sigma^{-1}B\end{pmatrix}'\begin{pmatrix}x_{t+1}\\x_t\end{pmatrix}\right\}
 \end{align*}
 We now have the joint distribution of $(x_{t+1},x_t)$ which is in the form of a blocked bivariate Gaussian. The marginal distribution of $x_{t+1}$ is obtained by integrating out $x_t$ using a standard identity:
-\[\int\mathcal{N}^{-1}\left(\begin{pmatrix}x_1\\ x_2\end{pmatrix} ; \begin{pmatrix}\theta_1\\ \theta_2\end{pmatrix}, \begin{pmatrix}\Lambda_{11} & \Lambda_{12} \\ \Lambda{21}& \Lambda_{22}\end{pmatrix}\right)dx_2 = \mathcal{N}^{-1}(x_1;\theta_1-\Lambda_{12}\Lambda_{22}^{-1}\theta_2, ~ \Lambda_{11} - \Lambda_{12}\Lambda_{22}^{-1}\Lambda_{21})\]
+\[\int\mathcal{N}^{-1}\left(\begin{pmatrix}x_1\\ x_2\end{pmatrix} ; \begin{pmatrix}\theta_1\\ \theta_2\end{pmatrix}, \begin{pmatrix}\Lambda_{11} & \Lambda_{12} \\ \Lambda_{21}& \Lambda_{22}\end{pmatrix}\right)dx_2 = \mathcal{N}^{-1}(x_1;\theta_1-\Lambda_{12}\Lambda_{22}^{-1}\theta_2, ~ \Lambda_{11} - \Lambda_{12}\Lambda_{22}^{-1}\Lambda_{21})\]
 
 Therefore,
 \[\int p(x_{t+1}|x_t)\alpha_t(x_t)dx_t \propto \mathcal{N}^{-1}(x_{t+1};\theta_{t,t+1},\Lambda_{t,t+1})\]
@@ -94,10 +94,37 @@ Filtered estimates of $x_{t}|y_{1:t}$ can be obtained from $\E[x_{t}|y_{1:t}] = 
 
 \subsection{Backward Kalman Filter}
 
-To perform smoothing or sampling based on the joint distribution of the hidden states given the observed states, we also need to compute backward messages, defined as:
-\[\beta_t(x_t) = p(y_{(t+1):T}|x_t)\]
-If we already know $\beta_{t+1}(x_{t+1})\sim\mathcal{N}^{-1}(x_t;~\theta^b_{t|t+1},~\Lambda^b_{t|t+1})$, then
-\[\beta_t(x_t) \propto \int p(x_{t+1}|x_t)p(y_{t+1}|x_{t+1})\beta_{t+1}(x_{t+1})dx_{t+1}\]
-
+This section follows closely with Fox Appendix D.2. To perform smoothing or sampling based on the joint distribution of the hidden states given the observed states (rather than just the filtered distribution), we also need to compute backward messages, defined as:
+\[m_{t,t-1}(x_{t-1}) = p(y_{t:T}|x_{t-1})\]
+These are similar to the $\beta_{t-1}$ messages that would be computed in the backward part of the forward-backward algorithm. If we already know $m_{t+1,t}(x_t)\sim\mathcal{N}^{-1}(x_t;~\theta^b_{t+1,t},~\Lambda^b_{t+1,t})$, then
+\[m_{t,t-1} \propto \int p(x_t|x_{t-1})p(y_t|x_t)m_{t+1,t}(x_t)dx_t\]
+The components of the integrand can be expressed as:
+\begin{align*}
+p(x_t|x_{t-1})&\propto\exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}A'\Sigma^{-1}A & -A'\Sigma^{-1}\\-\Sigma^{-1}A & \Sigma^{-1}\end{pmatrix}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix} + \begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}-A'\Sigma^{-1}B\\ \Sigma^{-1}B\end{pmatrix}\right\}\\
+p(y_t|x_t)&\propto\exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}0 & 0\\0 & C'R^{-1}C\end{pmatrix}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix} + \begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}0\\ C'R^{-1}y_t\end{pmatrix}\right\}\\
+m_{t+1,t}(x_t)&\propto\exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}0 & 0\\0 & \Lambda^b_{t+1,t}\end{pmatrix}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix} + \begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}0\\ \theta^b_{t+1,t}\end{pmatrix}\right\}
+\end{align*}
+Combining these together, the integrand becomes:
+\begin{align*}
+p(x_t|x_{t-1})p(y_t|x_t)m_{t+1,t}(x_t)&\propto\exp\left\{-\frac{1}{2}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}A'\Sigma^{-1}A & -A'\Sigma^{-1}\\-\Sigma^{-1}A & \Sigma^{-1}+C'R^{-1}C+\Lambda^b_{t+1,t}\end{pmatrix}\begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}\right.\ldots\\
+&\left. ~\ldots + \begin{pmatrix}x_{t-1}\\x_t\end{pmatrix}'\begin{pmatrix}-A'\Sigma^{-1}B\\ \Sigma^{-1}B+C'R^{-1}y_t+\theta^b_{t+1,t}\end{pmatrix}\right\}
+\end{align*}
+Applying the Gaussian marginalization identity from the previous section to integrate out $x_t$, we obtain
+\[m_{t,t-1}\propto\mathcal{N}^{-1}(x_{t-1}~;~\theta^b_{t,t-1}~,~\Lambda^b_{t,t-1})\]
+where
+\begin{align*}
+\Lambda^b_{t,t-1} &= A'\Sigma^{-1}A - A'\Sigma^{-1}(\Sigma^{-1}+C'R^{-1}C+\Lambda^b_{t+1,t})^{-1}\Sigma^{-1}A\\
+\theta^b_{t,t-1} &= -A'\Sigma^{-1}B +A'\Sigma^{-1}(\Sigma^{-1}+C'R^{-1}C+\Lambda^b_{t+1,t})^{-1}(\Sigma^{-1}B+C'R^{-1}y_t+\theta^b_{t+1,t})
+\end{align*}
+We see that these recursions agree with Fox's equation D.12, except she uses $\mu$ in place of $B$. She provides additional derivations to improve numerical stability (Algorithm 19). In particular, the messages are reparametrized using
+\begin{align*}
+\Lambda^b_{t|t} &= \Lambda^b_{t+1,t} + C'R^{-1}C\\
+\theta^b_{t|t} &= \theta^b_{t+1,t} + C'R^{-1}y_t
+\end{align*}
+Once the backward messages have been computed, forward sampling of the hidden states $x_t$ is given from the recursion
+\[p(x_t|x_{t-1},y_{1:T}) \propto p(x_t|x_{t-1})p(y_t|x_t)m_{t+1,t}(x_t)\]
+After some algebra, this yields the following distribution for sampling:
+\[p(x_t|x_{t-1},y_{1:T}) \propto \mathcal{N}^{-1}(x_t;~\Sigma^{-1}(Ax_{t-1}+B)+\theta^b_{t|t}~,~\Sigma^{-1}+\Lambda^b_{t|t})\]
+(Fox's equation D.18).
 
 \end{document}
