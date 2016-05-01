@@ -125,6 +125,6 @@ Once the backward messages have been computed, forward sampling of the hidden st
 \[p(x_t|x_{t-1},y_{1:T}) \propto p(x_t|x_{t-1})p(y_t|x_t)m_{t+1,t}(x_t)\]
 After some algebra, this yields the following distribution for sampling:
 \[p(x_t|x_{t-1},y_{1:T}) \propto \mathcal{N}^{-1}(x_t;~\Sigma^{-1}(Ax_{t-1}+B)+\theta^b_{t|t}~,~\Sigma^{-1}+\Lambda^b_{t|t})\]
-(Fox's equation D.18).
+(Fox's equation D.18). Note that generalization to a time-varying process with $A_t$,$B_t$, and $\Sigma_t$ known is straightforward.
 
 \end{document}

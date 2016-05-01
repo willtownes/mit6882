@@ -69,5 +69,19 @@ points(y[,1],y[,2])
 The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles. We apply the backwards message passing, forwards sampling approach of Fox et al. The backwards message passing algorithm is Algorithm 19 in Fox's thesis.
 
 ```{r}
+# inputs:
+# y is a matrix where each row is an observation
+# z is a vector of mode indicators
+# pars is a list, one element for each unique mode
+# pars[[i]] is a list containing time-varying parameters
+# "A" is transition matrix for linear dynamical system (LDS)
+# "B" is additive term for transition in LDS
+# "Sigma" is noise for transition in LDS
+# C and R are (time-invariant) parameters for observation model
+z<-rep(1,iter_max) #default to only one mode
+iter_max<-nrow(y)
+D<-ncol(y)
+#note if u=chol(R) then R=u'u, NOT uu'.
+
 ```
 
