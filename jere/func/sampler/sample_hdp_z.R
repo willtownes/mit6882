@@ -3,7 +3,7 @@ sample_hdp_z <-
     # data & likelihood
     x, lik_func, 
     # CRF parameter, prior
-    gamma, alpha, J, 
+    gamma, alpha, J,
     # CRF parameter, data
     z, m, pi)
     ######################################################
