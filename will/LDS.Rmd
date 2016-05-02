@@ -69,6 +69,8 @@ points(y[,1],y[,2])
 The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles. We apply the backwards message passing, forwards sampling approach of Fox et al. The backwards message passing algorithm is Algorithm 19 in Fox's thesis.
 
 ```{r}
+pars<-list()
+pars[[1]]<-list("A"=A,"B"=B,"Sigma"=Sigma)
 # inputs:
 # y is a matrix where each row is an observation
 # z is a vector of mode indicators
@@ -78,10 +80,48 @@ The curve indicates the true (discretized) trajectory, the circles represent the
 # "B" is additive term for transition in LDS
 # "Sigma" is noise for transition in LDS
 # C and R are (time-invariant) parameters for observation model
-z<-rep(1,iter_max) #default to only one mode
-iter_max<-nrow(y)
-D<-ncol(y)
+z<-rep(1,nrow(y)) #default to only one mode
+Tmax<-nrow(y)
+#D<-ncol(y)
+eye<-diag(ncol(A))
 #note if u=chol(R) then R=u'u, NOT uu'.
+#R^{-1} = u^{-1}u^{-T}
+#implementing Algorithm 19 from Emily Fox MIT dissertation
+U<-chol(R)
+UtiC<-solve(t(U),C)
+CtRiC<-t(UtiC)%*%UtiC
+#initialize messages
+Lambda_tt<-lapply(1:Tmax,function(x){CtRiC})
+theta_tt<-t(apply(y,1,function(yt){t(UtiC)%*%solve(t(U),yt)}))
+for(t in Tmax:1){
+  Lambda<-Lambda_tt[[t]]
+  par_t<-pars[[z[t]]]
+  A<-par_t[["A"]]
+  B<-par_t[["B"]]
+  Sigma<-par_t[["Sigma"]]
+  Jt<-t(solve(Lambda+Sigma,Lambda))
+  Lt<-eye - Jt
+  Lam<-t(A)%*%(Lt%*%Lambda%*%t(Lt)+Jt%*%solve(Sigma,t(Jt)))%*%A
+  theta<-t(A)%*%Lt%*%(theta_tt[t,] - Lambda%*%B)
+  if(t>1){
+    Lambda_tt[[t-1]]<-Lam+CtRiC #or Lam+Lambda_tt[[t-1]]
+    theta_tt[t-1,]<-theta+theta_tt[t-1,]
+  } else {
+    Lambda_00<-Lam
+    theta_00<-theta
+  }
+}
+### Backward messages have all been computed
+### Now forward sampling
+xs<-matrix(NA,nrow=Tmax,ncol=ncol(Sigma))
+for(t in 1:Tmax){
+  par_t<-pars[[z[t]]]
+  A<-par_t[["A"]]
+  B<-par_t[["B"]]
+  Sigma<-par_t[["Sigma"]]
+  info_mat<-solve(solve(Sigma)+Lambda_tt[[t]])
+  offset<-solve(Sigma,A%*%
+  xs[t,]<-rmvnorm(1,
 
 ```
 
