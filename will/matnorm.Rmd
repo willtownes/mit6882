@@ -1,0 +1,84 @@
+---
+title: "Multivariate and Matrix Normal Distributions"
+author: "Will Townes"
+date: "May 1, 2016"
+output: html_document
+---
+
+```{r}
+library(mvtnorm)
+```
+
+### Utility for Sampling from Multivariate Normal
+
+If we want to sample from $X\sim\mathcal{N}(\mu,\Sigma)$ it is easy using built-in functions. But if we have a Gaussian in information form, $X\sim\mathcal{N}^{-1}(\theta,\Lambda)$, we have to do expensive matrix inversions to reparameterize: $\Sigma=\Lambda^{-1}$ and $\mu=\Lambda^{-1}*\theta$. Instead, note that we can sample from $X$ by instead sampling $Z\sim\mathcal{N}(0,I)$ and transforming $X=U'Z+\mu$ where $\Sigma=U'U$. If $\Lambda=Q'Q$ then $\Sigma = \Lambda^{-1} = Q^{-1}\left(Q^{-1}\right)'$. Therefore $U' = Q^{-1}$ and we can express the transformation as $X=Q^{-1}Z+\Lambda^{-1}\theta$.
+
+```{r}
+D<-200
+mu<-runif(D,-10,10)
+U<-matrix(runif(D^2,-10,10),nrow=D)
+Sigma<-t(U)%*%U
+#transform to information form
+Lambda<-solve(Sigma)
+theta<-Lambda%*%mu
+# test speed with built-in approach
+built_in1<-function(n,theta,Lambda){
+  S<-solve(Lambda)
+  m<-S%*%theta
+  rmvnorm(n,m,S)
+}
+built_in2<-function(n,theta,Lambda){
+  S<-solve(Lambda)
+  m<-solve(Lambda,theta)
+  rmvnorm(n,m,S)
+}
+#test speed with custom functions
+rmvnorm_info<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  X<-replicate(n,backsolve(Q,rnorm(D)))
+  X+m
+}
+rmvnorm_info2<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  Qi<-backsolve(Q,diag(D))
+  X<-replicate(n,Qi%*%rnorm(D))
+  X+m
+}
+rmvnorm_info3<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  Qi<-backsolve(Q,diag(D))
+  Z<-matrix(rnorm(D*n),nrow=n,ncol=D)
+  #replicate(n,Qi%*%rnorm(D)+m)
+  X<-apply(Z,1,function(x){Qi%*%x})
+  X+m
+}
+
+Ntry<-10000
+system.time(x<-built_in1(Ntry,theta,Lambda))
+system.time(x<-built_in2(Ntry,theta,Lambda))
+system.time(y<-rmvnorm_info(Ntry,theta,Lambda))
+system.time(y<-rmvnorm_info2(Ntry,theta,Lambda))
+system.time(y<-rmvnorm_info3(Ntry,theta,Lambda))
+```
+
+Conclusion is that we can't beat the built-in solver even when we use fancy Cholesky decomposition tricks. Also, interestingly, calling *solve()* twice is faster than calling it once then using matrix multiplication. We illustrate the accuracy of the method below.
+
+```{r}
+#x is from built_in2()
+x<-built_in2(100000,theta,Lambda)
+#check mean
+mu_hat<-colMeans(x)
+mean((mu-mu_hat)^2)
+#check correlations
+cor_hat<-cor(x)
+mean((cor_hat-cov2cor(Sigma))^2)
+#check sd
+sd_hat<-apply(x,2,sd)
+mean((sd_hat-sqrt(diag(Sigma)))^2)
+```

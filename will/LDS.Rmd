@@ -7,6 +7,20 @@ output: html_document
 
 ```{r}
 library(mvtnorm)
+rmvnorm_info<-function(n,theta,Lambda){
+  # returns n by d matrix. n=number of replicates
+  # d=dimension of multivariate normal
+  # theta= offset parameter
+  # Lambda = information matrix
+  # special case of n=1, returns a vector, otherwise, a matrix
+  S<-solve(Lambda)
+  m<-solve(Lambda,theta)
+  if(n>1){
+    return(rmvnorm(n,m,S))
+  } else {
+    return(drop(rmvnorm(n,m,S)))
+  }
+}
 ```
 
 ### Generating Fake Data
@@ -99,7 +113,8 @@ for(t in Tmax:1){
   A<-par_t[["A"]]
   B<-par_t[["B"]]
   Sigma<-par_t[["Sigma"]]
-  Jt<-t(solve(Lambda+Sigma,Lambda))
+  Si<-solve(Sigma)
+  Jt<-t(solve(Lambda+Si,Lambda))
   Lt<-eye - Jt
   Lam<-t(A)%*%(Lt%*%Lambda%*%t(Lt)+Jt%*%solve(Sigma,t(Jt)))%*%A
   theta<-t(A)%*%Lt%*%(theta_tt[t,] - Lambda%*%B)
@@ -114,14 +129,19 @@ for(t in Tmax:1){
 ### Backward messages have all been computed
 ### Now forward sampling
 xs<-matrix(NA,nrow=Tmax,ncol=ncol(Sigma))
+xs0<-rmvnorm_info(1,theta_00,Lambda_00) #initialize x0, not sure here...
 for(t in 1:Tmax){
   par_t<-pars[[z[t]]]
   A<-par_t[["A"]]
   B<-par_t[["B"]]
   Sigma<-par_t[["Sigma"]]
-  info_mat<-solve(solve(Sigma)+Lambda_tt[[t]])
-  offset<-solve(Sigma,A%*%
-  xs[t,]<-rmvnorm(1,
-
+  info_mat<-solve(Sigma)+Lambda_tt[[t]]
+  if(t==1){
+    offset<-solve(Sigma,A%*%xs0+B)+theta_tt[t,]
+  } else {
+    offset<-solve(Sigma,A%*%xs[t-1,]+B)+theta_tt[t,]
+  }
+  xs[t,]<-rmvnorm_info(1,offset,info_mat)
+}
 ```
 
