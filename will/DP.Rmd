@@ -182,6 +182,7 @@ for $h=1,...L$.
 # y is a matrix where each row is a data point
 # alpha is the concentration parameter
 # H is the base distribution
+H<-NULL
 alpha<-1
 y<-as.matrix(dat[,1:2])
 k0<-.01 #diffuse prior for means
@@ -191,7 +192,8 @@ nu0<-D+2 #diffuse prior for covariance matrix
 ymean<-colMeans(y)
 ycov<-cov(y)
 m0<-ymean
-S0_inv<-solve(ycov)
+S0<-ycov
+S0_inv<-solve(S0)
 # set base measure also by empirical bayes if not specified
 if(is.null(H)) H<-function(n){rmvnorm(n,mean=ymean,sigma=S0)}
 #update hyperparameters based on data
@@ -199,7 +201,9 @@ N<-nrow(y)
 kn<-k0+N
 mn <- (k0*m0+colSums(y))/kn
 nun<-nu0+N
-Sn<-solve(S0_inv+t(y)%*%y+k0*(m0 %o% m0) - kn*(mn %o% mn))
-ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)
-ellipse(mn,Sn,radius=1,grid=FALSE,add=TRUE)
+Sn<-S0+t(y)%*%y+k0*(m0 %o% m0) - kn*(mn %o% mn)
+edat<-as.data.frame(ellipse(mn,Sn/(nun-D-1),radius=c(1,2)))
+ggplot(data=dat)+geom_point(aes(x=X1,y=X2,color=id),size=2)+geom_path(data=edat,aes(x=x,y=y),linetype=2)
 ```
+
+The dashed line in the above figure represents the 2 standard deviation contour implied by the posterior mean of $\Sigma$. As expected, most of the data lies within this contour.

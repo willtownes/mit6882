@@ -40,7 +40,7 @@ Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$
 meas_err_sd<-500
 pos_noise_sd<-10
 velo_noise_sd<-40
-k<-5 #number of seconds between observations
+k<-2 #number of seconds between observations
 init_pos<-c(0,0)
 init_velo<-c(250,250)
 Tmax<-60 #number of seconds to run the simulation
