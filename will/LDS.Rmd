@@ -37,7 +37,7 @@ Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$
 
 ```{r}
 #inputs
-meas_err_sd<-200
+meas_err_sd<-500
 pos_noise_sd<-10
 velo_noise_sd<-40
 k<-5 #number of seconds between observations

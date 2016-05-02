@@ -2,7 +2,7 @@
 title: "Hidden Markov Model"
 author: "Will Townes"
 date: "April 11, 2016"
-output: html_document
+output: pdf_document
 ---
 
 ```{r}

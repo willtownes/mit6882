@@ -115,9 +115,9 @@ rNW<-function(m,k,df,precision_matrix){
   # where D is dimensionality
   # mu|Sigma ~ Normal(m,(1/k)*S)
   #Lambda0<-solve(S)
-  stopifnot(df>0)
+  #stopifnot(df>0)
   D<-length(m)
-  stopifnot(all(dim(precision_matrix)==D))
+  #stopifnot(all(dim(precision_matrix)==D))
   nu<-df+D+1
   Lambda<-drop(rWishart(1,df,precision_matrix))
   Sigma<-solve(Lambda)
