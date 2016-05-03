@@ -6,14 +6,82 @@ output: html_document
 ---
 
 ```{r}
-library(mvtnorm)
+library(mvtnorm) #multivariate normal sampling
+library(MCMCpack) #inverse wishart sampling
+library(corrplot)
 ```
 
-### Utility for Sampling from Multivariate Normal
+### Cholesky Factors and Multivariate Normal Sampling
 
 If we want to sample from $X\sim\mathcal{N}(\mu,\Sigma)$ it is easy using built-in functions. But if we have a Gaussian in information form, $X\sim\mathcal{N}^{-1}(\theta,\Lambda)$, we have to do expensive matrix inversions to reparameterize: $\Sigma=\Lambda^{-1}$ and $\mu=\Lambda^{-1}*\theta$. Instead, note that we can sample from $X$ by instead sampling $Z\sim\mathcal{N}(0,I)$ and transforming $X=U'Z+\mu$ where $\Sigma=U'U$. If $\Lambda=Q'Q$ then $\Sigma = \Lambda^{-1} = Q^{-1}\left(Q^{-1}\right)'$. Therefore $U' = Q^{-1}$ and we can express the transformation as $X=Q^{-1}Z+\Lambda^{-1}\theta$.
 
+### Matrix Normal Distribution
+
+Fox's definition of matrix normal differs from that used elsewhere. According to Fox, if $X\sim\mathcal{MN}(M,V,K)$ then $vec(X)\sim\mathcal{N}(vec(M),K^{-1}\otimes V)$. According to Wikipedia, this means that $V$ is the "among row" (or "left"?) covariance matrix while $K^{-1}$ is the "among column" (or "right"?) covariance matrix. Let $Q=K^{-1}$. Let $V=AA'$ and $Q=B'B$ (for example, by Cholesky decomposition). Sample a matrix of iid standard normal variates as $Z$. Then the following is a sample from the matrix-normal distribution with parameters $M,V,K$:
+$$X=M+AZB$$
+Suppose we are given $V,K$ as in the Fox parameterization. We can obtain $A$ and $B$ by the following procedure. In R $chol(Q)$ returns the matrix $B$ while $chol(V)$ returns $A'$. Note from previous discussion if $R=chol(K)$ then $(R')^{-1}=chol(K^{-1})=chol(Q)=B$.
+
 ```{r}
+rmatnorm<-function(n,M,V,K,foxpar=TRUE){
+  # return n samples from matrix normal(M,V,K) distribution
+  # M = mean matrix
+  # V = among-row covariance matrix
+  # if foxpar==TRUE
+  # K = inverse of among-column covariance matrix
+  # if foxpar==FALSE
+  # K= among-column covariance matrix
+  m<-nrow(M)
+  p<-ncol(M)
+  A<-t(chol(V))
+  R<-chol(K)
+  fn1<-function(){A%*%matrix(rnorm(m*p),nrow=m,ncol=p)}
+  AZs<-replicate(n,fn1(),simplify=FALSE)
+  if(foxpar){
+    # case of K is inverse covariance matrix
+    fn2<-function(AZ){t(solve(R,t(AZ)))+M}
+  } else {
+    # case of K is covariance matrix
+    B<-R
+    fn2<-function(AZ){AZ%*%B+M}
+  }
+  lapply(AZs,fn2)
+}
+
+m<-4
+p<-5
+M<-matrix(0,nrow=m,ncol=p)
+V<-rbind(c(10,5,2,1),
+         c(5.0,9,2,1),
+         c(2,2,8,3),
+         c(1,1,3,7))
+Q<-rbind(c(10,5,0,0,0),
+         c(5,10,5,0,0),
+         c(0,5,10,5,0),
+         c(0,0,5,10,5),
+         c(0,0,0,5,10))
+K<-solve(Q)
+n<-1000
+res1<-rmatnorm(n,M,V,K,foxpar=TRUE)
+res2<-rmatnorm(n,M,V,Q,foxpar=FALSE)
+# Test of means equal to zero
+Reduce("+",res1)/n
+Reduce("+",res2)/n
+# Test of row correlations
+m<-nrow(M)
+p<-ncol(M)
+rcovhat1<-Reduce("+",lapply(res1,function(x){cov(t(x))}))/n
+rcovhat1
+rcovhat2<-Reduce("+",lapply(res2,function(x){cov(t(x))}))/n
+rcovhat2
+# we see that the two parameterizations are the same, good.
+# compare to ground truth.
+V*sum(diag(Q))
+Q*sum(diag(V))
+```
+
+### Digression: Speed Test for Multivariate Normal Sampling
+
+```{r eval=FALSE}
 D<-200
 mu<-runif(D,-10,10)
 U<-matrix(runif(D^2,-10,10),nrow=D)
@@ -59,7 +127,7 @@ rmvnorm_info3<-function(n,theta,Lambda){
   X+m
 }
 
-Ntry<-10000
+Ntry<-1000
 system.time(x<-built_in1(Ntry,theta,Lambda))
 system.time(x<-built_in2(Ntry,theta,Lambda))
 system.time(y<-rmvnorm_info(Ntry,theta,Lambda))
@@ -69,7 +137,7 @@ system.time(y<-rmvnorm_info3(Ntry,theta,Lambda))
 
 Conclusion is that we can't beat the built-in solver even when we use fancy Cholesky decomposition tricks. Also, interestingly, calling *solve()* twice is faster than calling it once then using matrix multiplication. We illustrate the accuracy of the method below.
 
-```{r}
+```{r eval=FALSE}
 #x is from built_in2()
 x<-built_in2(100000,theta,Lambda)
 #check mean
