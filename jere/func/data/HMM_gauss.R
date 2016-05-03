@@ -4,16 +4,30 @@ library(magrittr)
 HMM_gauss <- 
   function(
     gamma = 100, alpha = 10, kappa = 1, 
-    K = 100, T = 100
+    K = 100, T = 100, 
+    d_guass = 1, cor_gauss = 0.2, var_gauss = 1
   )
   {
-    # Hidden Markov Model with Gaussian Emissions
+    # Hidden Markov Model with MV Gaussian Emissions
     
     # K: number of states
-    # t: number of time points
+    # T: number of time points
+    # d: dimension of MVN emission
+    
+    # 0 candidate parameters
+    theta_0 <- as.list(1:K)
+      # lapply(1:K, 
+      #        function(k) 
+      #          runif(d_guass))
+    Sigma_0 <- 
+      lapply(1:K, 
+             function(k) 
+               cov_matrix(d = d_guass, 
+                          cor_mean = cor_gauss, 
+                          var_mean = var_gauss)
+      )
     
     # 1 Draw G_0, a dataframe of theta - beta
-    theta_0 <- runif(K)
     beta_0 <- rGEM(K, alpha = gamma)
     
     # 2 Draw G_K, draw K*10 many times
@@ -49,10 +63,12 @@ HMM_gauss <-
     
     # 4. generate data
     X_T <- 
-      sapply(Z_T, 
-             function(z) rnorm(1, theta_0[z], 0.01))
+      lapply(Z_T, 
+             function(z) 
+               rmvnorm(1, theta_0[[z]], Sigma_0[[z]])
+      ) %>% do.call(rbind, .)
     
-    # plot(1:T, X_T)
+    # plot(X_T)
 
     # return sample
     list(X = X_T, Z = Z_T)

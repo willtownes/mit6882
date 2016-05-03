@@ -1,5 +1,6 @@
 require(magrittr)
 require(dplyr)
+load("will_data.RData")
 
 source("./func/util/source_Dir.R")
 sourceDir("./func/")
@@ -8,10 +9,12 @@ lik_func <- lik_gauss_mean
 set.seed(10)
 dat <- 
   HMM_gauss(# 3 cluster, 1 sub-cluster (per cl), 
-    gamma = 100, alpha = 10, kappa = 5, 
-    K = 100, T = 100)
+    gamma = 1, alpha = 10, kappa = 10, 
+    K = 10, T = 100,
+    var_gauss = 0.01)
 
 plot(dat$X, type = "l")
+
 
 HDP(
   # data, restaurant number, dish number
