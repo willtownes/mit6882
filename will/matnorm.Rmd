@@ -27,7 +27,7 @@ $$E[(X-M)(X-M)'] = V* tr(Q)$$
 $$E[(X-M)'(X-M)] = Q* tr(V)$$
 We test that the empirical means of samples from our function agree with these properties.
 
-```{r eval=FALSE}
+```{r eval=TRUE}
 m<-4
 p<-5
 M<-matrix(0,nrow=m,ncol=p)
@@ -49,11 +49,11 @@ p<-ncol(M)
 # Test of means equal to zero
 mse(Reduce("+",res1)/n,M)
 mse(Reduce("+",res2)/n,M)
-# Test of row correlations
+# Test of row covariances
 # Wikipedia: E[(X-M)(X-M)'] = V*trace(Q)
 mse(V*trace(Q), list_mean(res1,function(x){(x-M)%*%t(x-M)}))
 mse(V*trace(Q),list_mean(res2,function(x){(x-M)%*%t(x-M)}))
-# Test of row correlations
+# Test of column covariances
 # Wikipedia: E[(X-M)'(X-M)] = Q*trace(V)
 mse(Q*trace(V),list_mean(res1,function(x){t(x-M)%*%(x-M)}))
 mse(Q*trace(V),list_mean(res2,function(x){t(x-M)%*%(x-M)}))
