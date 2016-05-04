@@ -1,0 +1,189 @@
+---
+title: "Multivariate Normal Sampling- Speed Tests"
+author: "Will Townes"
+date: "May 3, 2016"
+output: html_document
+---
+
+```{r message=FALSE}
+library(MASS)
+library(mvtnorm)
+library(microbenchmark)
+library(ggplot2)
+library(car)
+source("util.R")
+```
+
+### Digression: Speed Test for Multivariate Normal Sampling
+
+Can we use tricks like Cholesky Decomposition to do faster sampling from a Gaussian in information form?
+
+```{r}
+# test speed with built-in approach
+builtin1<-function(n,theta,Lambda){
+  S<-solve(Lambda)
+  m<-S%*%theta
+  rmvnorm(n,m,S)
+}
+builtin2<-function(n,theta,Lambda){
+  S<-solve(Lambda)
+  m<-solve(Lambda,theta)
+  rmvnorm(n,m,S)
+}
+builtin3a<-function(n,theta,Lambda){
+  rmvnorm(n,solve(Lambda,theta),chol2inv(chol(Lambda)))
+}
+builtin3b<-function(n,theta,Lambda){
+  mvrnorm(n,solve(Lambda,theta),chol2inv(chol(Lambda)))
+}
+builtin4a<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  m<-backsolve(Q,backsolve(Q,theta,transpose=TRUE))
+  rmvnorm(n,m,chol2inv(Q))
+}
+builtin4b<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  m<-backsolve(Q,backsolve(Q,theta,transpose=TRUE))
+  mvrnorm(n,m,chol2inv(Q))
+}
+
+#test speed with custom functions
+custom1<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  X<-replicate(n,backsolve(Q,rnorm(D)))
+  X+m
+}
+custom2<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  Qi<-backsolve(Q,diag(D))
+  X<-replicate(n,Qi%*%rnorm(D))
+  X+m
+}
+custom3<-function(n,theta,Lambda){
+  Q<-chol(Lambda)
+  D<-length(theta)
+  m<-drop(chol2inv(Q)%*%theta)
+  Qi<-backsolve(Q,diag(D))
+  Z<-matrix(rnorm(D*n),nrow=n,ncol=D)
+  #replicate(n,Qi%*%rnorm(D)+m)
+  X<-apply(Z,1,function(x){Qi%*%x})
+  X+m
+}
+custom4<-function(n,theta,Lambda,D=length(theta)){
+  Q<-chol(Lambda)
+  Z<-matrix(rnorm(n*D),nrow=D,ncol=n)
+  #using vector recycling tricks below
+  #Q^{-1}*Z+Lambda^{-1}*theta == Q^{-1}*(Z+(Q')^{-1}*theta)
+  backsolve(Q,Z+drop(backsolve(Q,theta,transpose=TRUE)))
+}
+```
+First let's look at the case where we repeatedly need to sample just one time from the distribution
+```{r}
+D<-300
+mu<-runif(D,-10,10)
+U<-matrix(runif(D^2,-10,10),nrow=D)
+Sigma<-t(U)%*%U
+#transform to information form
+Lambda<-solve(Sigma)
+theta<-Lambda%*%mu
+Ntry<-1
+res1<-microbenchmark(
+x<-builtin1(Ntry,theta,Lambda),
+x<-builtin2(Ntry,theta,Lambda),
+x<-builtin3a(Ntry,theta,Lambda),
+x<-builtin3b(Ntry,theta,Lambda),
+x<-builtin4a(Ntry,theta,Lambda),
+x<-builtin4b(Ntry,theta,Lambda),
+#y<-custom1(Ntry,theta,Lambda),
+#y<-custom2(Ntry,theta,Lambda),
+#y<-custom3(Ntry,theta,Lambda),
+y<-custom4(Ntry,theta,Lambda),
+times=100)
+#print(res1)
+autoplot(res1)
+```
+
+We see that custom4 does best by far. Among the built-in samplers, the two MASS methods (3b,4b) do better than the mvtnorm package (3a,4a). Now let's try the case where we only need one set of parameters to be sampled for many replicates
+
+```{r}
+Ntry<-20000
+res2<-microbenchmark(
+x<-builtin1(Ntry,theta,Lambda),
+x<-builtin2(Ntry,theta,Lambda),
+x<-builtin3a(Ntry,theta,Lambda),
+x<-builtin3b(Ntry,theta,Lambda),
+x<-builtin4a(Ntry,theta,Lambda),
+x<-builtin4b(Ntry,theta,Lambda),
+#y<-custom1(Ntry,theta,Lambda),
+#y<-custom2(Ntry,theta,Lambda),
+#y<-custom3(Ntry,theta,Lambda),
+y<-custom4(Ntry,theta,Lambda),
+times=10)
+autoplot(res2)
+y<-t(y)
+mse(cov(y),Sigma)
+mse(cov(x),Sigma)
+mse(colMeans(y),mu)
+mse(colMeans(x),mu)
+```
+
+For large numbers of replicates (>10,000) with a fixed set of parameters, the built-in methods start to become competitive. But the custom4 still does quite well. We can eliminate customs 1,2,3 at this point. What happens when we increase the number of replicates to 100,000?
+
+```{r}
+Ntry<-100000
+res3<-microbenchmark(
+#x<-builtin1(Ntry,theta,Lambda),
+#x<-builtin2(Ntry,theta,Lambda),
+#x<-builtin3a(Ntry,theta,Lambda),
+x<-builtin3b(Ntry,theta,Lambda),
+#x<-builtin4a(Ntry,theta,Lambda),
+x<-builtin4b(Ntry,theta,Lambda),
+y<-custom4(Ntry,theta,Lambda),
+times=5)
+autoplot(res3)
+y<-t(y)
+mse(cov(y),Sigma)
+mse(cov(x),Sigma)
+mse(colMeans(y),mu)
+mse(colMeans(x),mu)
+```
+
+We see that custom method 4 is still competitive with the built-in samplers. Now let's check to make sure it is accurate. "builtin2" is the most obviously correct of the samplers. We use it as the baseline for comparison.
+
+```{r}
+Ntry<-20000
+x<-builtin2(Ntry,theta,Lambda)
+y<-t(custom4(Ntry,theta,Lambda))
+# sanity check parameter consistency
+mse(Sigma,solve(Lambda))
+mse(mu,solve(Lambda,theta))
+# correlation accuracy
+rho<-cov2cor(Sigma)
+mse(rho,cor(x))
+mse(rho,cor(y))
+# standard deviation accuracy
+sd_true<-sqrt(diag(Sigma))
+mse(sd_true,apply(x,2,sd))
+mse(sd_true,apply(y,2,sd))
+# mean accuracy
+mse(mu,colMeans(x))
+mse(mu,colMeans(y))
+```
+
+We see that the custom4 function appears to do a good job sampling from the correct distribution. A visual demonstration of samples from a bivariate normal is shown below along with ellipses of the true 2 standard deviation contour.
+
+```{r}
+mu<-c(1,1)
+Sigma<-matrix(c(9,3,3,4),nrow=2)
+Lambda<-solve(Sigma)
+theta<-solve(Sigma,mu)
+dat<-as.data.frame(t(custom4(2000,theta,Lambda)))
+colnames(dat)<-c("X1","X2")
+edat<-as.data.frame(ellipse(mu,Sigma,radius=2))
+ggplot(data=dat)+geom_point(aes(x=X1,y=X2),size=1,alpha=.8,colour="blue")+geom_path(data=edat,aes(x=x,y=y),linetype=2,size=1.3)
+```
+Note that custom4 is implemented as "rmvnorm_info" in util.R

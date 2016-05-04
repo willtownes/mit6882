@@ -1,10 +1,73 @@
-#utility function used by other scripts
+### Utility function used by other scripts
 library(matrixStats) #logSumExp functions
-library(mvtnorm)
+library(mvtnorm) #multivariate normal sampling
+library(MCMCpack) #inverse wishart sampling
 if(require(RSpectra)){
   FASTEIG=TRUE
 } else {
   FASTEIG=FALSE
+}
+
+### General-purpose useful functions
+mse<-function(x,y){
+  #compute mean squared error betwen object x and object y
+  mean((x-y)^2)
+}
+trace<-function(x){
+  #return the trace of matrix x
+  sum(diag(x))
+}
+list_mean<-function(x,f=NULL){
+  # input: x, a list where each element in the list is some numeric array
+  # optional: f, a function, to be applied to each element of x
+  # output: arithmetic mean computed across elements of x
+  # ie, [f(x[[1]])+f(x[[2]])+....f(x[[n]])]/n
+  if(is.null(f)){
+    return(Reduce("+",x)/length(x))
+  } else {
+    return(Reduce("+",lapply(x,f))/length(x))
+  }
+}
+
+### Multivariate and Matrix Normal Sampling
+# see matnorm.Rmd for examples/ visual tests
+# see also speed_tests.Rmd
+
+rmvnorm_info<-function(n,theta,Lambda,D=length(theta)){
+  # sample n variates from multivariate normal in "information form"
+  # theta="offset" and Lambda="information matrix"
+  # Lambda must be positive definite
+  # standard params, mu=Lambda^{-1}*theta, Sigma=Lambda^{-1}
+  Q<-chol(Lambda)
+  Z<-matrix(rnorm(n*D),nrow=D,ncol=n)
+  #using vector recycling tricks below
+  #Q^{-1}*Z+Lambda^{-1}*theta == Q^{-1}*(Z+(Q')^{-1}*theta)
+  backsolve(Q,Z+drop(backsolve(Q,theta,transpose=TRUE)))
+}
+
+rmatnorm<-function(n,M,V,K,foxpar=TRUE){
+  # return n samples from matrix normal(M,V,K) distribution
+  # M = mean matrix
+  # V = among-row covariance matrix
+  # if foxpar==TRUE
+  # K = inverse of among-column covariance matrix
+  # if foxpar==FALSE
+  # K= among-column covariance matrix
+  m<-nrow(M)
+  p<-ncol(M)
+  A<-t(chol(V))
+  R<-chol(K)
+  fn1<-function(){A%*%matrix(rnorm(m*p),nrow=m,ncol=p)}
+  AZs<-replicate(n,fn1(),simplify=FALSE)
+  if(foxpar){
+    # case of K is inverse covariance matrix
+    fn2<-function(AZ){t(backsolve(R,t(AZ)))+M}
+  } else {
+    # case of K is covariance matrix
+    B<-R
+    fn2<-function(AZ){AZ%*%B+M}
+  }
+  lapply(AZs,fn2)
 }
 
 ### Hidden Markov Model Functions
@@ -274,6 +337,8 @@ rLDS_melt<-function(LDS_samples,cnames=NULL){
     return(res)
   }
 }
+
+
 
 ### graphing ellipses
 # library(car)

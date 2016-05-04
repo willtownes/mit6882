@@ -5,10 +5,8 @@ date: "May 1, 2016"
 output: html_document
 ---
 
-```{r}
-library(mvtnorm) #multivariate normal sampling
-library(MCMCpack) #inverse wishart sampling
-library(corrplot)
+```{r message=FALSE}
+source("util.R") #where the workhorse functions are stored
 ```
 
 ### Cholesky Factors and Multivariate Normal Sampling
@@ -21,32 +19,15 @@ Fox's definition of matrix normal differs from that used elsewhere. According to
 $$X=M+AZB$$
 Suppose we are given $V,K$ as in the Fox parameterization. We can obtain $A$ and $B$ by the following procedure. In R $chol(Q)$ returns the matrix $B$ while $chol(V)$ returns $A'$. Note from previous discussion if $R=chol(K)$ then $(R')^{-1}=chol(K^{-1})=chol(Q)=B$.
 
-```{r}
-rmatnorm<-function(n,M,V,K,foxpar=TRUE){
-  # return n samples from matrix normal(M,V,K) distribution
-  # M = mean matrix
-  # V = among-row covariance matrix
-  # if foxpar==TRUE
-  # K = inverse of among-column covariance matrix
-  # if foxpar==FALSE
-  # K= among-column covariance matrix
-  m<-nrow(M)
-  p<-ncol(M)
-  A<-t(chol(V))
-  R<-chol(K)
-  fn1<-function(){A%*%matrix(rnorm(m*p),nrow=m,ncol=p)}
-  AZs<-replicate(n,fn1(),simplify=FALSE)
-  if(foxpar){
-    # case of K is inverse covariance matrix
-    fn2<-function(AZ){t(solve(R,t(AZ)))+M}
-  } else {
-    # case of K is covariance matrix
-    B<-R
-    fn2<-function(AZ){AZ%*%B+M}
-  }
-  lapply(AZs,fn2)
-}
+### Testing the matrix normal sampler
 
+Tests for the matrix normal sampling function. According to [wikipedia](https://en.wikipedia.org/wiki/Matrix_normal_distribution), if $X$ is distributed as matrix normal with mean $M$, row covariance $V$ and column covariance $Q$, then the following properties hold:
+$$E[X] = M$$
+$$E[(X-M)(X-M)'] = V* tr(Q)$$
+$$E[(X-M)'(X-M)] = Q* tr(V)$$
+We test that the empirical means of samples from our function agree with these properties.
+
+```{r eval=FALSE}
 m<-4
 p<-5
 M<-matrix(0,nrow=m,ncol=p)
@@ -60,93 +41,21 @@ Q<-rbind(c(10,5,0,0,0),
          c(0,0,5,10,5),
          c(0,0,0,5,10))
 K<-solve(Q)
-n<-1000
+n<-100000 #larger values lead to lower MSE (higher accuracy)
 res1<-rmatnorm(n,M,V,K,foxpar=TRUE)
 res2<-rmatnorm(n,M,V,Q,foxpar=FALSE)
-# Test of means equal to zero
-Reduce("+",res1)/n
-Reduce("+",res2)/n
-# Test of row correlations
 m<-nrow(M)
 p<-ncol(M)
-rcovhat1<-Reduce("+",lapply(res1,function(x){cov(t(x))}))/n
-rcovhat1
-rcovhat2<-Reduce("+",lapply(res2,function(x){cov(t(x))}))/n
-rcovhat2
-# we see that the two parameterizations are the same, good.
-# compare to ground truth.
-V*sum(diag(Q))
-Q*sum(diag(V))
+# Test of means equal to zero
+mse(Reduce("+",res1)/n,M)
+mse(Reduce("+",res2)/n,M)
+# Test of row correlations
+# Wikipedia: E[(X-M)(X-M)'] = V*trace(Q)
+mse(V*trace(Q), list_mean(res1,function(x){(x-M)%*%t(x-M)}))
+mse(V*trace(Q),list_mean(res2,function(x){(x-M)%*%t(x-M)}))
+# Test of row correlations
+# Wikipedia: E[(X-M)'(X-M)] = Q*trace(V)
+mse(Q*trace(V),list_mean(res1,function(x){t(x-M)%*%(x-M)}))
+mse(Q*trace(V),list_mean(res2,function(x){t(x-M)%*%(x-M)}))
 ```
 
-### Digression: Speed Test for Multivariate Normal Sampling
-
-```{r eval=FALSE}
-D<-200
-mu<-runif(D,-10,10)
-U<-matrix(runif(D^2,-10,10),nrow=D)
-Sigma<-t(U)%*%U
-#transform to information form
-Lambda<-solve(Sigma)
-theta<-Lambda%*%mu
-# test speed with built-in approach
-built_in1<-function(n,theta,Lambda){
-  S<-solve(Lambda)
-  m<-S%*%theta
-  rmvnorm(n,m,S)
-}
-built_in2<-function(n,theta,Lambda){
-  S<-solve(Lambda)
-  m<-solve(Lambda,theta)
-  rmvnorm(n,m,S)
-}
-#test speed with custom functions
-rmvnorm_info<-function(n,theta,Lambda){
-  Q<-chol(Lambda)
-  D<-length(theta)
-  m<-drop(chol2inv(Q)%*%theta)
-  X<-replicate(n,backsolve(Q,rnorm(D)))
-  X+m
-}
-rmvnorm_info2<-function(n,theta,Lambda){
-  Q<-chol(Lambda)
-  D<-length(theta)
-  m<-drop(chol2inv(Q)%*%theta)
-  Qi<-backsolve(Q,diag(D))
-  X<-replicate(n,Qi%*%rnorm(D))
-  X+m
-}
-rmvnorm_info3<-function(n,theta,Lambda){
-  Q<-chol(Lambda)
-  D<-length(theta)
-  m<-drop(chol2inv(Q)%*%theta)
-  Qi<-backsolve(Q,diag(D))
-  Z<-matrix(rnorm(D*n),nrow=n,ncol=D)
-  #replicate(n,Qi%*%rnorm(D)+m)
-  X<-apply(Z,1,function(x){Qi%*%x})
-  X+m
-}
-
-Ntry<-1000
-system.time(x<-built_in1(Ntry,theta,Lambda))
-system.time(x<-built_in2(Ntry,theta,Lambda))
-system.time(y<-rmvnorm_info(Ntry,theta,Lambda))
-system.time(y<-rmvnorm_info2(Ntry,theta,Lambda))
-system.time(y<-rmvnorm_info3(Ntry,theta,Lambda))
-```
-
-Conclusion is that we can't beat the built-in solver even when we use fancy Cholesky decomposition tricks. Also, interestingly, calling *solve()* twice is faster than calling it once then using matrix multiplication. We illustrate the accuracy of the method below.
-
-```{r eval=FALSE}
-#x is from built_in2()
-x<-built_in2(100000,theta,Lambda)
-#check mean
-mu_hat<-colMeans(x)
-mean((mu-mu_hat)^2)
-#check correlations
-cor_hat<-cor(x)
-mean((cor_hat-cov2cor(Sigma))^2)
-#check sd
-sd_hat<-apply(x,2,sd)
-mean((sd_hat-sqrt(diag(Sigma)))^2)
-```
