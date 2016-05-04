@@ -1,11 +1,10 @@
 sample_hmm_z <- 
   function(
-    # data & likelihood
-    x, log_lik_func, 
-    # CRF parameter, prior
-    gamma, alpha, kappa, lambda,
-    # CRF parameter, data
-    z, m, p0, pk, 
+    y, log_lik_func, 
+    z, m, x,
+    p0, pk,
+    theta, lambda,
+    hyper,
     verbose = FALSE
     )
     ######################################################
@@ -20,8 +19,8 @@ sample_hmm_z <-
     ######################################################    
   {
     #### 0. initialize parameters ####
-    n <- nrow(x)
-    d <- ncol(x)
+    n <- nrow(y)
+    d <- ncol(y)
     K <- length(m)
 
     #### 1. compute backward message ####
@@ -29,13 +28,13 @@ sample_hmm_z <-
     # (last col reserved for initial value)
     # SLOOOOWWWWWWWWW
     m_KT <- 
-      backward_message(x, lambda, pk, 
+      backward_message(y, theta, pk, 
                        log_lik_func, 
                        verbose)
     
     #### 2. assemble forward likelihood  ####
     f_KT <- # a state*time prob matrix
-      forward_prob(x, z, lambda, pk, 
+      forward_prob(y, z, theta, pk, 
                    log_lik_func, m_KT, 
                    verbose)
     

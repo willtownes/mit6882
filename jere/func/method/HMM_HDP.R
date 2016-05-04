@@ -2,41 +2,51 @@
 HMM_HDP <- 
   function(
     # data, restaurant number, dish number
-    x, K = 10,
-    # base measure & parameters
-    log_lik_func = NULL, lambda_init = NULL, 
-    sample_lambda = FALSE, lambda_sampler = NULL, 
+    y, K = 10,
+    # emission measure & parameters
+    log_lik_func = NULL, 
+    sample_emiss = FALSE, 
+    theta_init = NULL, theta_sampler = NULL, 
+    lambda_init = NULL, lambda_sampler = NULL,
+    x_sampler = NULL,
     # DP concentration/base-measure
+    sample_hyper = FALSE,
     gamma = 1, alpha = NULL, kappa = NULL, 
     # initialization
-    z_init = NULL, m_init = NULL, 
+    x_init = NULL, z_init = NULL, m_init = NULL, 
     p0_init = NULL, pk_init = NULL,
     # MCMC parameter
     iter_max = 2e3, iter_update = 10, verbose = FALSE)
   {
-    # K:           max number of states
-    # log_lik_func:    log emission dist likelihood
-    # lambda_init: initial value of emission parameters, 1:K list
-    #
-    # iter_update: num of iteration to wait before update plot
+    # INPUT:
+    # K:              max number of states
+    # log_lik_func:   log emission dist likelihood
+    # theta_init:     initial for state-specific emission parameters, 
+    #                 1:K list
+    # lambda_init:    initial for state-invariant emission par, list
+    # iter_update:    num of iteration to wait before update plot
     
     #### 0. Global par set up ####
-    n <- nrow(x)
-    d <- ncol(x)
+    T <- nrow(y)
+    d <- ncol(y)
     
-    if (is.null(theta_init)|is.null(log_lik_func)) 
-      stop("emission parameters 'theta_init' and 'log_lik_func' must be supplied")
-    if (sample_lambda){
-      if (is.null(lambda_sampler))
-        stop("sample_lambda = TRUE but 'lambda_sampler' not supplied")
-      if (length(lambda_sampler) != K)
-        stop("'lambda_sampler' should be a list of length K")
+    if (is.null(theta_init)|is.null(lambda_init)) 
+      stop("emission parameters for theta/lambda must be supplied")
+    if (is.null(theta_sampler)|is.null(lambda_sampler)) 
+      stop("emission samplers for theta/lambda must be supplied")
+    if (length(theta_init) != K)
+      stop("'theta_sampler' should be a list of length K")
+    if (sample_emiss){
+      if (is.null(theta_sampler)|is.null(lambda_sampler))
+        stop("sample_emiss = TRUE but lambda/theta sampler not supplied")
     }
-
+    
     #### 1. Initialization ####
     #### > 1.1 default initialization (random assignment) ====
+    if (is.null(x_init)) # random assign 
+      x_init <- rmvnorm(T, rep(0, d), diag(d))
     if (is.null(z_init)) # random assign 
-      z_init <- sample(1:K, n, replace = TRUE)
+      z_init <- sample(1:K, T, replace = TRUE)
     if (is.null(m_init)) # equal table number
       m_init <- rep(1, K)
     if (is.null(p0_init)) # equal global dish prob
@@ -48,118 +58,158 @@ HMM_HDP <-
     if (is.null(kappa)) kappa <- 0.5
     
     #### > 1.2 initialize container ====
-    z_iter <- array(NaN, dim = c(iter_max, n)) # state assignment per obs
+    z_iter <- array(NaN, dim = c(iter_max, T)) # state assignment per obs
     m_iter <- array(NaN, dim = c(iter_max, K)) # table count per dish
     p0_iter <- array(NaN, dim = c(iter_max, K)) # global state distribution
     pk_iter <- array(NaN, dim = c(iter_max, K, K)) # state transition distribution
-    lambda_iter <- vector("list", length = iter_max)
     
+    # optionally, sample emission parameters
+    if (sample_emiss){
+      theta_iter <- vector("list", length = iter_max)
+      lambda_iter <- vector("list", length = iter_max)
+    }
     # optionally, sample hyperparameters
-    gamma_iter <- array(NaN, dim = c(iter_max, 1))
-    alpha_iter <- array(NaN, dim = c(iter_max, 1))
-    kappa_iter <- array(NaN, dim = c(iter_max, 1))
+    if (sample_hyper){
+      gamma_iter <- array(NaN, dim = c(iter_max, 1))
+      alpha_iter <- array(NaN, dim = c(iter_max, 1))
+      kappa_iter <- array(NaN, dim = c(iter_max, 1))
+    }
     
     #### 2. Iterate & Visualize ####
+    x_cur <- x_init
     z_cur <- z_init
     m_cur <- m_init
     p0_cur <- p0_init
     pk_cur <- pk_init
     
-    gamma_cur <- gamma
-    alpha_cur <- alpha
-    kappa_cur <- kappa
+    hyper_cur <- 
+      list(gamma = gamma, alpha = alpha, kappa = kappa)
+    theta_cur <- theta_init
     lambda_cur <- lambda_init
     
     pb <- txtProgressBar(1, iter_max, style = 3)
     for (ii in 1:iter_max){
       setTxtProgressBar(pb, ii)
+      
+      #### 2.1 x: pseudo obs for SLDS ====
+      x_new <-
+        x_sampler(
+          y, log_lik_func, 
+          z = z_cur, m = m_cur, x = x_cur,
+          p0 = p0_cur, pk = pk_cur,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur
+        )
+      
       #### 2.1 z: state assignment per obs ====
       z_new <-
         sample_hmm_z(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_cur, 
-          z = z_cur, m = m_cur, 
-          p0 = p0_cur, pk = pk_cur,
-          verbose)
-
+          y, log_lik_func, 
+          z = z_cur, m = m_cur, x = x_new,
+          p0 = p0_cur, pk = pk_cur,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur, 
+          verbose = verbose
+        )
+      
       #### 2.2 m: table count per state ====
       m_list <-
         sample_hmm_m(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_cur, 
-          z = z_new, m = m_cur, 
-          p0 = p0_cur, pk = pk_cur)
+          y, log_lik_func, 
+          z = z_new, m = m_cur, x = x_new,
+          p0 = p0_cur, pk = pk_cur,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur
+        )
       
       m_new <- m_list$m
-      n_jk <- m_list$n
+      hyper_cur$n_jk <- m_list$n
       
       #### 2.3 p0 & pk: state-transition ====
       p0_new <-
         sample_hmm_p0(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_cur, 
-          z = z_new, m = m_new,
-          p0 = p0_cur, pk = pk_cur, n_jk = n_jk)
- 
+          y, log_lik_func, 
+          z = z_new, m = m_new, x = x_new,
+          p0 = p0_cur, pk = pk_cur,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur
+        )
+      
       pk_new <-
         sample_hmm_pk(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_cur, 
-          z = z_new, m = m_new,
-          p0 = p0_new, pk = pk_cur, n_jk = n_jk)     
+          y, log_lik_func, 
+          z = z_new, m = m_new, x = x_new,
+          p0 = p0_new, pk = pk_cur,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur
+        )     
       
-      #### 2.4 theta: emission par ====
+      #### 2.4 theta & lambda: emission par ====
       # to be plugged in
+      theta_new <- 
+        theta_sampler(
+          y, log_lik_func, 
+          z = z_new, m = m_new, x = x_new,
+          p0 = p0_new, pk = pk_new,          
+          theta = theta_cur, lambda = lambda_cur,
+          hyper = hyper_cur)       
+      
       lambda_new <- 
-        sample_hmm_lambda(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_cur, 
-          z = z_new, m = m_new,
-          p0 = p0_new, pk = pk_new, n_jk = n_jk)       
+        lambda_sampler(
+          y, log_lik_func, 
+          z = z_new, m = m_new, x = x_new,
+          p0 = p0_new, pk = pk_new,          
+          theta = theta_new, lambda = lambda_cur,
+          hyper = hyper_cur) 
       
       #### 2.5 hyperparameters ====
-      gamma_new <- # to do 
-        sample_hmm_gamma(
-          x, log_lik_func, 
-          gamma = gamma_cur, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_new, 
-          z = z_new, m = m_new,
-          p0 = p0_new, pk = pk_new, n_jk = n_jk)          
+      # sample new hyperpar & insert into the list 'hyper'
+      if (sample_hyper){
+        hyper_new <- # to do
+          sample_hmm_gamma(
+            y, log_lik_func, 
+            z = z_new, m = m_new, x = x_new,
+            p0 = p0_new, pk = pk_new,          
+            theta = theta_new, lambda = lambda_new,
+            hyper = hyper_cur)          
+        
+        hyper_new <- # to do
+          sample_hmm_alpha(
+            y, log_lik_func, 
+            z = z_new, m = m_new, x = x_new,
+            p0 = p0_new, pk = pk_new,          
+            theta = theta_new, lambda = lambda_new,
+            hyper = hyper_new)          
+        
+        hyper_new <- # to do
+          sample_hmm_kappa(
+            y, log_lik_func, 
+            z = z_new, m = m_new, x = x_new,
+            p0 = p0_new, pk = pk_new,          
+            theta = theta_new, lambda = lambda_new,
+            hyper = hyper_new)
+      }
       
-      alpha_new <- # to do
-        sample_hmm_alpha(
-          x, log_lik_func, 
-          gamma = gamma_new, alpha = alpha_cur, 
-          kappa = kappa_cur, lambda = lambda_new, 
-          z = z_new, m = m_new,
-          p0 = p0_new, pk = pk_new, n_jk = n_jk)          
-      
-      kappa_new <- # to do
-        sample_hmm_kappa(
-          x, log_lik_func, 
-          gamma = gamma_new, alpha = alpha_new, 
-          kappa = kappa_cur, lambda = lambda_new, 
-          z = z_new, m = m_new,
-          p0 = p0_new, pk = pk_new, n_jk = n_jk)
-
       #### 2.z update temp par (*_cur) 
       z_iter[ii, ] <- z_cur <- z_new
       m_iter[ii, ] <- m_cur <- m_new
       p0_iter[ii, ] <- p0_cur <- p0_new
       pk_iter[ii, ,] <- pk_cur <- pk_new
       
-      gamma_iter[ii, ] <- gamma_cur <- gamma_new
-      alpha_iter[ii, ] <- alpha_cur <- alpha_new
-      kappa_iter[ii, ] <- kappa_cur <- kappa_new
+      if (sample_emiss){
+        theta_iter[[ii]] <- theta_cur <- theta_new
+        lambda_iter[[ii]] <- lambda_cur <- lambda_new
+      }
       
+      if (sample_hyper){
+        hyper_cur <- hyper_new
+        gamma_iter[ii, ] <- hyper_cur$gamma
+        alpha_iter[ii, ] <- hyper_cur$alpha
+        kappa_iter[ii, ] <- hyper_cur$kappa
+      }
       
-      if (ii %% iter_update == 1){
-        plot(x[, 1], col = z_cur, 
+      if (ii %% iter_update == 0){
+        plot(y[, 1], col = z_cur, pch = 19,
              main = paste0(ii, ", K = ", length(m_cur))
         )
       }
@@ -173,5 +223,5 @@ HMM_HDP <-
     pk_iter <- pk_iter[iter_burn:ii, , ]
     
     #### 3. Return ####
-    z_iter[length(z_iter)]
+    z_iter
   }

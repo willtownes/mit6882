@@ -30,7 +30,7 @@ forward_prob <-
       prob_mat <- # normalize
         prob_mat - logSumExp(prob_mat)
       
-      if (any(is.na(prob_mat)) | !all(is.finite(prob_mat))){
+      if (any(is.na(prob_mat)) | !all(is.finite(max(prob_mat, 0)))){
         stop("forward_prob: over/underflow prob value. Bad message values?")
       }
       prob[, t] <- exp(prob_mat)

@@ -2,13 +2,12 @@ library(plyr)
 
 sample_hmm_m <- 
   function(
-    # data & likelihood
-    x, log_lik_func, 
-    # CRF parameter, prior
-    gamma, alpha, kappa, lambda,
-    # CRF parameter, data
-    z, m, p0, pk,
-    verbose = FALSE)
+    y, log_lik_func, 
+    z, m, x,
+    p0, pk,
+    theta, lambda,
+    hyper
+  )
   {
     # sample_hmm_m: sample table count for dish by simulating t_ji
     ######################################################
@@ -16,13 +15,17 @@ sample_hmm_m <-
     # > z:  dish assignment for obs
     # > m:  table count per parameter
     # output:
-    # > m: updated table count
+    # > m_new: updated table count
     ######################################################    
     
     #### 0. initialize parameters ####
-    n <- nrow(x)
-    d <- ncol(x)
+    n <- nrow(y)
+    d <- ncol(y)
     K <- length(m)
+    
+    gamma <- hyper$gamma
+    alpha <- hyper$alpha
+    kappa <- hyper$kappa
     
     #
     m_jk <- matrix(NaN, nrow = K, ncol = K)

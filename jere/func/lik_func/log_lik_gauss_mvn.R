@@ -2,10 +2,10 @@ library(mvtnorm)
 
 
 log_lik_gauss_mvn <- 
-  function(x, lambda){
+  function(y, theta){
     # Input
     # x:      data
     # lambda: list of emission parameters (mu, cov)
     
-    dmvnorm(x, lambda$mean, lambda$cov, log = TRUE)
+    dmvnorm(y, theta$mean, theta$cov, log = TRUE)
   }

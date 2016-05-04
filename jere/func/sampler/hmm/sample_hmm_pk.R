@@ -1,26 +1,26 @@
 sample_hmm_pk <- 
   function(
-    # data & likelihood
-    x, log_lik_func, 
-    # CRF parameter, prior
-    gamma, alpha, kappa, lambda,
-    # CRF parameter, data
-    z, m, p0, pk, n_jk,
-    verbose = FALSE)
+    y, log_lik_func, 
+    z, m, x,
+    p0, pk,
+    theta, lambda,
+    hyper
+  )
     ######################################################
-    # sample pi, the global dish distribution
-    # input:
-    # > lik_func: likelihood function return lik and n_ji
-    # > z:  dish assignment for obs
-    # > m:  table count per parameter
-    # output:
-    # > pi: updated z assigment
+    # sample pk, the state-transition distribution
     ######################################################    
   {
+    #
     K <- length(m)
+    gamma <- hyper$gamma
+    alpha <- hyper$alpha
+    kappa <- hyper$kappa
+    n_jk <- hyper$n_jk
+    
+    #
     pk_prob_mat <- alpha * pk + n_jk + kappa * diag(K)
     
-    pk_new <- apply(prob_mat, 1, rdirichlet)
+    pk_new <- apply(pk_prob_mat, 1, rdirichlet)
     
-    t(pi_new)
+    t(pk_new)
   }

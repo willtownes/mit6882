@@ -1,13 +1,19 @@
 sample_hmm_alpha <- 
   function(
-    # data & likelihood
-    x, log_lik_func, 
-    # CRF parameter, prior
-    gamma, alpha, kappa, lambda,
-    # CRF parameter, data
-    z, m, p0, pk, n_jk,
-    verbose = FALSE
-  )
+    y, log_lik_func, 
+    z, m, x,
+    hyper, theta, lambda,
+    p0, pk)
   {
-    alpha  
+    gamma <- hyper$gamma
+    alpha <- hyper$alpha
+    kappa <- hyper$kappa
+    
+    #
+    alpha_new <- alpha
+    
+    
+    #
+    hyper$alpha <- alpha_new
+    hyper    
   }
