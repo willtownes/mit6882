@@ -127,4 +127,21 @@ After some algebra, this yields the following distribution for sampling:
 \[p(x_t|x_{t-1},y_{1:T}) \propto \mathcal{N}^{-1}(x_t;~\Sigma^{-1}(Ax_{t-1}+B)+\theta^b_{t|t}~,~\Sigma^{-1}+\Lambda^b_{t|t})\]
 (Fox's equation D.18). Note that generalization to a time-varying process with $A_t$,$B_t$, and $\Sigma_t$ known is straightforward.
 
+\section{Unknown Dynamical Parameters}
+
+Up to this point, we have assumed known dynamical parameters $A_t$, $\Sigma_t$, $B$, $C$, and $R$ and used these to sample from the state sequence $x_{1:T}$. We now reverse this procedure to sample from the dynamical parameters conditional on a state sequence. Throughout, we are conditioning on a fixed mode sequence $z_{1:T}$ which is sampled from the sticky HDP-HMM procedure. We continue to assume $C$ is fixed (for identifiability). Conditional on a known sequence of states computed by the Kalman smoother/sampler procedure, $A_t,\Sigma_t$ are independent of $R$. Focusing on $A_t$,$\Sigma_t$, Fox shows in thesis section 2.4.4 that the likelihood is that of a multivariate linear regression:
+\[Y\sim\mathcal{MN}(AX+B,\Sigma,I)\]
+This is a more general model than that presented by Fox, who sets $B=\mathbf{0}$. We modify the notation from that used in other sections for simplicity. In the context of the overall model, the $t^{th}$ column of $Y$ would correspond to $x_{t}$ and the $t^{th}$ column of $X$ would correspond to $x_{t-1}$. Also, as shown by Fox the model must also be split up based on the mode allocations $z_{1:T}$ from the HMM, but it turns out that each mode has its own conditionally independent multivariate linear regression, so we can ignore $z_{1:T}$ in the notation here.
+
+The conjugate priors are:
+\begin{align*}
+\Sigma&\sim\mathcal{IW}(\nu,\Delta)\\
+A|\Sigma&\sim\mathcal{MN}(M_A,\Sigma,K_A)\\
+B|\Sigma&\sim\mathcal{MN}(M_B,\Sigma,K_B)
+\end{align*}
+
+While in the prior, $A$ and $B$ are specified as independent conditional on $\Sigma$, they become dependent in the posterior. Therefore, we modify Fox's result to specify full conditionals rather than a complete posterior. Define the following
+
+
+
 \end{document}

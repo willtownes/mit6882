@@ -27,7 +27,7 @@ $$E[(X-M)(X-M)'] = V* tr(Q)$$
 $$E[(X-M)'(X-M)] = Q* tr(V)$$
 We test that the empirical means of samples from our function agree with these properties.
 
-```{r eval=TRUE}
+```{r eval=FALSE}
 m<-4
 p<-5
 M<-matrix(0,nrow=m,ncol=p)
@@ -59,3 +59,7 @@ mse(Q*trace(V),list_mean(res1,function(x){t(x-M)%*%(x-M)}))
 mse(Q*trace(V),list_mean(res2,function(x){t(x-M)%*%(x-M)}))
 ```
 
+### Bayesian Multivariate Linear Regression
+
+Fox Thesis Section 2.4.4 shows that the matrix normal- inverse wishart prior is conjugate to the multivariate linear regression likelihood. The probability model is:
+$$Y\sim\mathcal{MN}(AX+B$$
