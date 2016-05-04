@@ -3,7 +3,7 @@ require(dplyr)
 
 source("./func/util/source_Dir.R")
 sourceDir("./func/")
-lik_func <- lik_gauss_mean
+lik_func <- lik_gauss_dhp
 
 set.seed(400)
 dat <- 

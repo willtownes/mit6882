@@ -5,7 +5,7 @@ HMM_gauss <-
   function(
     gamma = 100, alpha = 10, kappa = 1, 
     K = 100, T = 100, 
-    d_guass = 1, cor_gauss = 0.2, var_gauss = 1
+    d_gauss = 1, cor_gauss = 0.2, var_gauss = 1
   )
   {
     # Hidden Markov Model with MV Gaussian Emissions
@@ -15,14 +15,13 @@ HMM_gauss <-
     # d: dimension of MVN emission
     
     # 0 candidate parameters
-    theta_0 <- as.list(1:K)
-      # lapply(1:K, 
-      #        function(k) 
-      #          runif(d_guass))
+    theta_0 <- 
+      lapply(1:K, 
+             function(k) rep(k, d_gauss))
     Sigma_0 <- 
       lapply(1:K, 
              function(k) 
-               cov_matrix(d = d_guass, 
+               cov_matrix(d = d_gauss, 
                           cor_mean = cor_gauss, 
                           var_mean = var_gauss)
       )
@@ -69,7 +68,13 @@ HMM_gauss <-
       ) %>% do.call(rbind, .)
     
     # plot(X_T)
-
+    
     # return sample
-    list(X = X_T, Z = Z_T)
+    list(X = X_T, Z = Z_T, 
+         Theta = 
+           lapply(1:K,
+                  function(i) 
+                    list(mean = theta_0[[i]], cov = Sigma_0[[i]])
+           )
+    )
   }
