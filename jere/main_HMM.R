@@ -11,12 +11,12 @@ pars[[2]]$B <- pars[[2]]$B/500
 pars[[2]]$Sigma <- pars[[2]]$Sigma/3000
 
 
-set.seed(8000)
+set.seed(100)
 z_true <- 
-  HMM_z(gamma = 1, alpha = 1, kappa = 10, 
+  HMM_z(gamma = 1, alpha = 10, kappa = 10, 
         K = 2, T = 100)
 
-z_true <- c(rep(1, 30), rep(2, 30), rep(1, 30), rep(2, 30))
+#z_true <- c(rep(1, 30), rep(2, 30), rep(1, 30), rep(2, 30))
 dat <- HMM_SLDS(z_true, pars)
 
 plot(dat$Y, col = dat$Z, pch = 19)
@@ -53,7 +53,7 @@ z_obs <-
     x_init = x_init, x_sampler = x_sampler,
     # DP concentration/base-measure
     sample_hyper = FALSE,
-    gamma = 1, alpha = NULL, kappa = NULL, 
+    gamma = 1, alpha = NULL, kappa = 10, 
     # initialization
     z_init = NULL, m_init = NULL, 
     p0_init = NULL, pk_init = NULL,
