@@ -186,10 +186,23 @@ S_{xx}^{-1} &= \begin{pmatrix}\left(S_{axx}-X S_{bxx}^{-1}X'\right)^{-1} & -S_{a
 &= \begin{pmatrix}\Omega_a^{-1} & -S_{axx}^{-1}X\Omega_b^{-1}\\
                 -S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}
 \end{align*}
-Where $\Omega_a = S_{axx}-XS_{bxx}^{-1}X'$ and $\Omega_b = S_{bxx}-X'S_{axx}^{-1}X$. The quadratic form can then be expressed as
+Where $\Omega_a = S_{axx}-XS_{bxx}^{-1}X'$ and $\Omega_b = S_{bxx}-X'S_{axx}^{-1}X$. Note that due to symmetry, the off diagonal elements are just transposes of each other, so that $S_{axx}^{-1}X\Omega_{b}^{-1}=\left(S_{bxx}^{-1}X'\Omega_{a}^{-1}\right)' = \Omega_a^{-1}XS_{bxx}^{-1}$:
+\[S_{xx}^{-1} = \begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\
+                -S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\]
+
+
+Let $S_{yx}=(S_{yx1},S_{yx2})$. The quadratic form can then be expressed as
 \begin{align*}
-S_{yx}S_{xx}^{-1}S_{yx}' &= S_{yx}\begin{pmatrix}\Omega_a^{-1} & -S_{axx}^{-1}X\Omega_b^{-1}\\-S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\begin{pmatrix}XY'+K_AM_A'\\Y'+K_BM_B'\end{pmatrix}\\
-&=(YX'\begin{pmatrix}\Omega_a^{-1}(Y'+K_BM_B') -S_{axx}^{-1}X\Omega_b^{-1}(XY'+K_AM_A')\\\Omega_b^{-1}(XY'+K_AM_A') -S_{bxx}^{-1}X'\Omega_a^{-1}(Y'+K_BM_B')\end{pmatrix}\\
+S_{yx}S_{xx}^{-1}S_{yx}' &= (S_{yx1},S_{yx2})\begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\-S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\begin{pmatrix}S_{yx1}'\\S_{yx2}'\end{pmatrix}\\
+&=S_{yx1}\Omega_a^{-1}S_{yx1}'+S_{yx2}\Omega_b^{-1}S_{yx2}'-S_{yx1}\Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'-\left(S_{yx1}\Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'\right)'
+\end{align*}
+
+Based on this result, we could also sample directly from the joint full conditional of $(A,B)=\tilde{A}$ rather than $A$ and $B$ separately by the following result:
+\[p(\tilde{A}|\Sigma,D) = \mathcal{MN}\left(\tilde{A};~(S_{xx}^{-1}S_{yx}')',\Sigma,S_{xx}\right)\]
+Where
+\begin{align*}
+S_{xx}^{-1}S_{yx}' &= \begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\-S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\begin{pmatrix}S_{yx1}'\\S_{yx2}'\end{pmatrix}\\
+&= \begin{pmatrix}\Omega_a^{-1}S_{yx1}' - \Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'\\\Omega_b^{-1}S_{yx1}' - S_{bxx}^{-1}X'\Omega_a^{-1}S_{yx1}'\end{pmatrix}
 \end{align*}
 
 
