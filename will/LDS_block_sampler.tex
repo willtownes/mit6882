@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \newcommand{\E}{\mathbb{E}}
+\DeclareMathOperator{\tr}{tr}
 
 \begin{document}
 \title{MIT 6.882 Final Project}
@@ -129,82 +130,44 @@ After some algebra, this yields the following distribution for sampling:
 
 \section{Unknown Dynamical Parameters}
 
-Up to this point, we have assumed known dynamical parameters $A_t$, $\Sigma_t$, $B$, $C$, and $R$ and used these to sample from the state sequence $x_{1:T}$. We now reverse this procedure to sample from the dynamical parameters conditional on a state sequence. Throughout, we are conditioning on a fixed mode sequence $z_{1:T}$ which is sampled from the sticky HDP-HMM procedure. We continue to assume $C$ is fixed (for identifiability). Conditional on a known sequence of states computed by the Kalman smoother/sampler procedure, $A_t,\Sigma_t$ are independent of $R$. Focusing on $A_t$,$\Sigma_t$, Fox shows in thesis section 2.4.4 that the likelihood is that of a multivariate linear regression:
-\[Y\sim\mathcal{MN}(AX+B,\Sigma,I)\]
-The likelihood is that of a matrix normal distribution. If $Y\sim\mathcal{MN}(M,V,K)$ then $M$ is the mean parameter, $V$ is the row covariance parameter and $K^{-1}$ is the column covariance parameter\footnote{Fox's parameterization differs from common usage (cf wikipedia) in that the right covariance matrix here is $K^{-1}$ rather than K}. Our likelihood is a more general model than that presented by Fox, who sets $B=\mathbf{0}$. We modify the notation from that used in other sections for simplicity. In the context of the overall model, the $t^{th}$ column of $Y$ would correspond to $x_{t}$ and the $t^{th}$ column of $X$ would correspond to $x_{t-1}$. Also, as shown by Fox the model must also be split up based on the mode allocations $z_{1:T}$ from the HMM, but it turns out that each mode has its own conditionally independent multivariate linear regression, so we can ignore $z_{1:T}$ in the notation here.
+Up to this point, we have assumed known dynamical parameters $A_t$, $\Sigma_t$, $B$, $C$, and $R$ and used these to sample from the state sequence $x_{1:T}$. We now reverse this procedure to sample from the dynamical parameters conditional on a state sequence. Throughout, we are conditioning on a fixed mode sequence $z_{1:T}$ which is sampled from the sticky HDP-HMM procedure. We continue to assume $C$ is fixed (for identifiability). Conditional on a known sequence of states computed by the Kalman smoother/sampler procedure, $A_t,\Sigma_t$ are independent of $R$. Focusing on $A_t$,$\Sigma_t$, Fox shows in thesis section 2.4.4 that the problem reduces to a collection of multivariate linear regressions:
+\[Y\sim\mathcal{MN}(AX+B 1',\Sigma,I)\]
+where $1$ indicates a vector of ones, of length $n$. Suppose $Y$ has $d$ rows and $n$ columns. The likelihood is that of a matrix normal distribution. If $Y\sim\mathcal{MN}(M,V,K)$ then $M$ is the mean parameter, $V$ is the row covariance parameter and $K^{-1}$ is the column covariance parameter\footnote{Fox's parameterization differs from common usage (cf wikipedia) in that the right covariance matrix here is $K^{-1}$ rather than K}. Our likelihood is a more general model than that presented by Fox, who sets $B=\mathbf{0}$. We modify the notation from that used in other sections for simplicity. In the context of the overall model, the $t^{th}$ column of $Y$ would correspond to $x_{t}$ and the $t^{th}$ column of $X$ would correspond to $x_{t-1}$. Also, as shown by Fox the model must also be split up based on the mode allocations $z_{1:T}$ from the HMM, but it turns out that each mode has its own conditionally independent multivariate linear regression, so we can ignore $z_{1:T}$ in the notation here.
 
 The conjugate priors are:
 \begin{align*}
 \Sigma&\sim\mathcal{IW}(\nu,\Delta)\\
 A|\Sigma&\sim\mathcal{MN}(M_A,\Sigma,K_A)\\
-B|\Sigma&\sim\mathcal{MN}(M_B,\Sigma,K_B)
+B|\Sigma&\sim\mathcal{N}(M_B,\Sigma/\kappa_0)
 \end{align*}
 
-While in the prior, $A$ and $B$ are specified as independent conditional on $\Sigma$, they become dependent in the posterior. Therefore, we modify Fox's result to specify full conditionals rather than a complete posterior. Let $D=\{X,Y\}$ represent the data. For the full conditional of $A$, note that conditional on $B$, we can replace $Y$ with $Y-B$ and obtain exactly the same distribution as derived by Fox for the special case of $B=0$. Therefore,
+The hyperparameter $\kappa_0$ allows $B$ to be assigned a more or less diffuse prior than $A$. Note that no such parameter can be included in the prior for $A$ since it is unidentifiable with respect to $K_A$. While in the prior, $A$ and $B$ are specified as independent conditional on $\Sigma$, they become dependent in the posterior. Therefore, we modify Fox's result to specify full conditionals rather than a complete posterior. Let $D=\{X,Y\}$ represent the data. For the full conditional of $A$, note that conditional on $B$, we can replace $Y$ with $Y-B 1'$ and obtain exactly the same distribution as derived by Fox for the special case of $B=0$. Therefore,
 \[p(A|\Sigma,D,B)=\mathcal{MN}\left(A;~S_{ayx}S^{-1}_{axx},\Sigma,S_{axx}\right)\]
 with slightly modified sufficient statistics
 \begin{align*}
 S_{axx} &= XX'+K_A\\
-S_{ayx} &= (Y-B)X'+M_A K_A = YX'-BX'+M_A K_A\\
-S_{ayy} &= (Y-B)(Y-B)'+M_A K_A M_A' = YY'-\left(BY'+(BY')'\right)+M_A K_A M_A'
+S_{ayx} &= (Y-B 1')X'+M_A K_A = YX'-B (X1)'+M_A K_A\\
+S_{ayy} &= (Y-B 1')(Y-B 1')'+M_A K_A M_A' = YY'-\left(B (Y1)'+Y1B'\right)+M_A K_A M_A'
 \end{align*}
-Similarly, conditional on $AX$, we can replace $Y$ with $Y-AX$ in the likelihood and consider the ``data'' for $B$ to be the identity matrix rather than the data matrix $X$. Again the distribution is just a reparameterized matrix normal likelihood, leading to the following full conditional:
-\[p(B|\Sigma,D,A) = \mathcal{MN}\left(A;~S_{byx}S^{-1}_{bxx},\Sigma,S_{bxx}\right)\]
-with modified sufficient statistics
-\begin{align*}
-S_{bxx} &= (II')+K_B = I+K_B\\
-S_{byx} &= (Y-AX)I'+M_B K_B = Y-AX+M_B K_B\\
-S_{byy} &= (Y-AX)(Y-AX)'+M_B K_B M_B' = YY' - \left(AXY'+(AXY')'\right)+M_B K_B M_B'
-\end{align*}
-Finally, to obtain the full conditional of $\Sigma$, note that we can again reparametrize to obtain a likelihood consistent with Fox's notation. Specifically, set
-\begin{align*}
-\tilde{X}&=\begin{pmatrix}X\\I\end{pmatrix}\\
-\tilde{A}&=\begin{pmatrix}A & B\end{pmatrix}\\
-\tilde{M}&=\begin{pmatrix}M_A & M_B\end{pmatrix}\\
-\tilde{K}&=\begin{pmatrix}K_A & 0\\ 0 & K_B\end{pmatrix}
-\end{align*}
-Then the likelihood can be expressed as
-\[Y\sim\mathcal{MN}(\tilde{A}\tilde{X},\Sigma,I)\]
-and the (joint) prior for $\tilde{A}$ equivalent to
-\[\tilde{A}|\Sigma\sim\mathcal{MN}(\tilde{M},\Sigma,\tilde{K})\]
-At this point, we can just use the result from Fox's thesis (equation 2.99) to show that the full conditional of $\Sigma$ is given by
-\[p(\Sigma|D)=\mathcal{IW}(\nu+N,~\Delta+S_{y|x})\]
-where N is the number of columns in $Y$, $\nu$ and $\Delta$ are hyperparameters, and the sufficient statistic is
-\[S_{y|x}=S_{yy}-S_{yx}S^{-1}_{xx}S_{yx}'\]
-where
-\begin{align*}
-S_{yy} &= YY'+\tilde{M}\tilde{K}\tilde{M}' = YY'+(M_A,~M_B)\begin{pmatrix}K_A & 0 \\ 0 & K_b\end{pmatrix}\begin{pmatrix}M_A'\\M_B'\end{pmatrix}\\
-&= YY'+M_A K_A M_A' + M_B K_B M_B'\\
-S_{yx} &= Y\tilde{X}'+\tilde{M}\tilde{K} = Y(X',~I)+(M_A,~M_B)\begin{pmatrix}K_A & 0 \\ 0 & K_B\end{pmatrix}\\
-&= (YX',~Y) + (M_A K_A,~ M_B K_B) = (YX'+M_AK_A,~Y+M_BK_B)\\
-S_{xx} &= \tilde{X}\tilde{X}'+\tilde{K} = \begin{pmatrix}X\\I\end{pmatrix}(X',~I) + \begin{pmatrix}K_A & 0 \\ 0 & K_b\end{pmatrix}\\
-&=\begin{pmatrix}K_A+XX' & X \\ X' & K_b+I\end{pmatrix} = \begin{pmatrix}S_{axx} & X \\ X' & S_{bxx}\end{pmatrix}
-\end{align*}
-Applying the standard block matrix inversion formula,
-\begin{align*}
-S_{xx}^{-1} &= \begin{pmatrix}\left(S_{axx}-X S_{bxx}^{-1}X'\right)^{-1} & -S_{axx}^{-1}X\left(S_{bxx}-X'S_{axx}^{-1}X\right)^{-1} \\ -S_{bxx}^{-1}X'\left(S_{axx}-XS_{bxx}^{-1}X'\right)^{-1} & \left(S_{bxx}-X'S_{axx}^{-1}X\right)^{-1}\end{pmatrix}\\
-&= \begin{pmatrix}\Omega_a^{-1} & -S_{axx}^{-1}X\Omega_b^{-1}\\
-                -S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}
-\end{align*}
-Where $\Omega_a = S_{axx}-XS_{bxx}^{-1}X'$ and $\Omega_b = S_{bxx}-X'S_{axx}^{-1}X$. Note that due to symmetry, the off diagonal elements are just transposes of each other, so that $S_{axx}^{-1}X\Omega_{b}^{-1}=\left(S_{bxx}^{-1}X'\Omega_{a}^{-1}\right)' = \Omega_a^{-1}XS_{bxx}^{-1}$:
-\[S_{xx}^{-1} = \begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\
-                -S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\]
+Note that post-multiplying a matrix by $1$ is equivalent to computing row sums of the matrix. Also, $1'1=n$ and pre-multiplying by $1'$ yields column sums.
 
-
-Let $S_{yx}=(S_{yx1},S_{yx2})$. The quadratic form can then be expressed as
+Similarly, conditional on $AX$, we can replace $Y$ with $Y-AX$ in the likelihood and consider the ``data'' for $B$ to be the row vector $1'$ rather than the data matrix $X$. Since $B$ is a vector, the distribution is just a reparameterized Gaussian likelihood. The full conditional is proportional to all the terms in the joint density involving $B$:
 \begin{align*}
-S_{yx}S_{xx}^{-1}S_{yx}' &= (S_{yx1},S_{yx2})\begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\-S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\begin{pmatrix}S_{yx1}'\\S_{yx2}'\end{pmatrix}\\
-&=S_{yx1}\Omega_a^{-1}S_{yx1}'+S_{yx2}\Omega_b^{-1}S_{yx2}'-S_{yx1}\Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'-\left(S_{yx1}\Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'\right)'
+p(B|\Sigma,D,A)&\propto\exp\left\{-\frac{1}{2}\tr\left[\Sigma^{-1}\left((Y-AX-B1')(Y-AX-B1')' + \kappa_0(B-M_B)(B-M_B)'\right)\right]\right\}\\
+&\propto\exp\left\{-\frac{1}{2}\tr\left[\Sigma^{-1}\left(B1'1B'-(Y-AX)1B'-B1'(Y-AX)'\right.\right.\right.+\ldots\\
+&~~\ldots\left.\left.\left.+\kappa_0(BB'-M_BB'-BM_B')\right)\right]\right\}\\
+&\propto\exp\left\{-\frac{1}{2}\tr\left[\Sigma^{-1}(n+\kappa_0)\left(BB'-\frac{1}{n+\kappa_0}\left((Y-AX)1+\kappa_0M_B\right)B'\right.\right.\right.+\ldots\\
+&~~\ldots\left.\left.\left.-B\frac{1}{n+\kappa_0}\left((Y-AX)1+\kappa_0M_B\right)'\right)\right]\right\}
 \end{align*}
+This is the kernel of a multivariate normal distribution with covariance $\Sigma/(n+\kappa_0)$ and mean
+\[\frac{1}{n+\kappa_0}\left((Y-AX)1+\kappa_0M_B\right) = \frac{1}{n+\kappa_0}\left(Y1-AX1+\kappa_0M_B\right)\]
 
-Based on this result, we could also sample directly from the joint full conditional of $(A,B)=\tilde{A}$ rather than $A$ and $B$ separately by the following result:
-\[p(\tilde{A}|\Sigma,D) = \mathcal{MN}\left(\tilde{A};~(S_{xx}^{-1}S_{yx}')',\Sigma,S_{xx}\right)\]
-Where
+Finally, the full conditional of $\Sigma$ is proportional to all terms involving $\Sigma$ in the joint density function:
 \begin{align*}
-S_{xx}^{-1}S_{yx}' &= \begin{pmatrix}\Omega_a^{-1} & -\Omega_a^{-1}XS_{bxx}^{-1}\\-S_{bxx}^{-1}X'\Omega_a^{-1} & \Omega_b^{-1}\end{pmatrix}\begin{pmatrix}S_{yx1}'\\S_{yx2}'\end{pmatrix}\\
-&= \begin{pmatrix}\Omega_a^{-1}S_{yx1}' - \Omega_a^{-1}XS_{bxx}^{-1}S_{yx2}'\\\Omega_b^{-1}S_{yx2}' - S_{bxx}^{-1}X'\Omega_a^{-1}S_{yx1}'\end{pmatrix}
+p(\Sigma|D,A,B)&\propto\ \vert\Sigma\vert^{-\frac{n}{2}}\exp\left\{-\frac{1}{2}\tr\left[\Sigma^{-1}\left((Y-AX-B1')(Y-AX-B1')'\right)\right]\right\}\times\ldots\\
+&~~\ldots\times\vert\Sigma\vert^{-\frac{\nu+d+1}{2}}\exp\left\{-\frac{1}{2}\tr\left(\Sigma^{-1}\Delta\right)\right\}
 \end{align*}
-
-
+This is the kernel of an inverse Wishart distribution with degrees of freedom $\nu+n$ and scale matrix
+\[\Delta_n=\Delta+(Y-AX-B1')(Y-AX-B1')'\]
 
 \end{document}
