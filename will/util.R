@@ -70,6 +70,74 @@ rmatnorm<-function(n,M,V,K,foxpar=TRUE){
   lapply(AZs,fn2)
 }
 
+bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
+  #Bayesian Multivariate Linear Regression
+  #Given hyperparameters and data, run Gibbs Sampler to obtain samples from the posterior of 
+  #input: Y= (d by n) outcome matrix
+  #X= (d by n) input matrix
+  #model: Y=AX+B+E with E~MN(0,Sigma,I)
+  #hyper is a list of hyperparameters. Elements:
+  #nu0,Delta0=hyperparameters of Sigma~Inv.Wishart()
+  #M_A,K_A=hyperparameters of transition matrix A~MatNorm()
+  #M_B,kappa0=hyperparameters of additive matrix B~Norm()
+  #Any hyperparameters not provided will be set to following defaults "empirical bayes":
+  #nu0=nrow(Y)+2 (most diffuse value while still proper)
+  #Delta0=0.75*empirical covariance of Y rows
+  #kappa0=0 uninformative
+  #M_A= (d by d) zero matrix 
+  #M_B= zero vector of length d
+  #K_A= (d by d) zero matrix (uninformative prior)
+  #output: list of length nSample
+  #each element has three components, "A","B","Sigma"
+  #corresponding to samples from posterior of these parameters.
+  d<-nrow(Y)
+  n<-ncol(Y)
+  M_A<-hyper[["M_A"]]
+  M_B<-hyper[["M_B"]]
+  K_A<-hyper[["K_A"]]
+  kappa0<-hyper[["kappa0"]]
+  nu0<-hyper[["nu0"]]
+  Delta0<-hyper[["Delta0"]]
+  #set defaults if not specified
+  if(is.null(M_A)) M_A<-matrix(0,nrow=d,ncol=d)
+  if(is.null(M_B)) M_B<-rep(0,d)
+  if(is.null(K_A)) K_A<-matrix(0,nrow=d,ncol=d)
+  if(is.null(kappa0)) kappa0<-.01
+  if(is.null(nu0)) nu0<-d+2
+  if(is.null(Delta0)) Delta0<-.75*cov(t(Y))
+  #sufficient statistics
+  Ymn<-rowMeans(Y)
+  Xmn<-rowMeans(X)
+  Saxx<-X%*%t(X)+K_A
+  YXt<-Y%*%t(X)
+  MaKa<-M_A%*%K_A
+  kappan<-n+kappa0
+  nun<-nu0+n
+  wt_b<-n/kappan
+  J<-rep(1,n)
+  #initialize data containers
+  #resS<-resA<-matrix(0,nrow=d,ncol=d)
+  #resB<-rep(0,d)
+  res<-replicate(nSample,list(),simplify=FALSE)
+  A<-M_A
+  B<-rowMeans(Y)
+  Sigma<-Delta0 #/(nu0-d-1)
+  for(t in (1-nBurn):nSample){
+    mu_b<-wt_b*(Ymn-A%*%Xmn)+(1-wt_b)*M_B
+    B<-mvrnorm(1,mu_b,Sigma/kappan)
+    Sayx<-YXt-B%*%t(n*Xmn)+MaKa
+    A<-rmatnorm(1,t(solve(Saxx,t(Sayx))),Sigma,Saxx,foxpar=TRUE)[[1]]
+    resids<-Y-A%*%X-B%o%J
+    Sigma<-riwish(nun,Delta0+resids%*%t(resids))
+    if(t>0){
+      res[[t]][["A"]]<-A
+      res[[t]][["B"]]<-B
+      res[[t]][["Sigma"]]<-Sigma
+    }
+  }
+  return(res)
+}
+
 ### Hidden Markov Model Functions
 # refer to HMM.Rmd for examples/ visual tests
 get_stationary_dist<-function(transition){

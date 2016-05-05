@@ -27,7 +27,7 @@ $$E[(X-M)(X-M)'] = V* tr(Q)$$
 $$E[(X-M)'(X-M)] = Q* tr(V)$$
 We test that the empirical means of samples from our function agree with these properties.
 
-```{r eval=FALSE}
+```{r eval=TRUE}
 m<-4
 p<-5
 M<-matrix(0,nrow=m,ncol=p)
@@ -41,7 +41,7 @@ Q<-rbind(c(10,5,0,0,0),
          c(0,0,5,10,5),
          c(0,0,0,5,10))
 K<-solve(Q)
-n<-100000 #larger values lead to lower MSE (higher accuracy)
+n<-50000 #larger values lead to lower MSE (higher accuracy)
 res1<-rmatnorm(n,M,V,K,foxpar=TRUE)
 res2<-rmatnorm(n,M,V,Q,foxpar=FALSE)
 m<-nrow(M)
@@ -62,10 +62,10 @@ mse(Q*trace(V),list_mean(res2,function(x){t(x-M)%*%(x-M)}))
 ### Bayesian Multivariate Linear Regression
 
 Fox Thesis Section 2.4.4 shows that the matrix normal- inverse wishart prior is conjugate to the multivariate linear regression likelihood. The probability model is:
-$$Y\sim\mathcal{MN}(AX+B,\Sigma,I)$$
-$$\Sigma\sim\mathcal{IW}(\nu,\Delta)$$
+$$Y\sim\mathcal{MN}(AX+B1',\Sigma,I)$$
+$$\Sigma\sim\mathcal{IW}(\nu_0,\Delta_0)$$
 $$A|\Sigma\sim\mathcal{MN}(M_A,\Sigma,K_A)$$
-$$B|\Sigma\sim\mathcal{MN}(M_B,\Sigma,K_B)$$
+$$B|\Sigma\sim\mathcal{N}(M_B,\Sigma/\kappa_0)$$
 For more detailed derivations, refer to the LDS block sampler latex/pdf files.
 
 ```{r}
@@ -74,60 +74,23 @@ k<-2 #seconds between observations
 a<-c(0,-9.8) #acceleration
 A<-diag(4)
 A[1:2,3:4]<-k*diag(2)
-B<-rbind(.5*k^2*diag(2),k*diag(2))%*%a
-B<-B%*%rep(1,20) #copy vector many times to make a matrix
+B<-drop(rbind(.5*k^2*diag(2),k*diag(2))%*%a) #vector
+#B<-B%*%rep(1,20) #copy vector many times to make a matrix
 Sigma<-diag(c(20,20,10,10))
 #generate fake data
 X<-matrix(runif(80,-20,20),nrow=4)
+#using vector recycling since B is a vector but AX is matrix
 Y<-rmatnorm(1,A%*%X+B,Sigma,diag(20))[[1]]
-
-#default hyperparameter settings
-d<-nrow(Y)
-N<-ncol(Y)
-nu0<-d+2
-Delta0<-.75*cov(t(Y))
-M_A<-matrix(0,nrow=d,ncol=d)
-M_B<-matrix(0,nrow=d,ncol=N)
-K_A<-diag(d)
-K_B<-diag(N)
-
-bayes_mlinreg_post<-function(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0){
-  #Given hyperparameters and data, compute parameters of the posterior
-  #input: Y=outcome matrix
-  #X=input matrix
-  #model: Y=AX+B+E with E~MN(0,Sigma,I)
-  #nu0,Delta0=hyperparameters of Sigma
-  #M_A,K_A=hyperparameters of transition matrix A
-  #M_B,K_B=hyperparameters of additive matrix B
-  #output: list of parameters of the posterior
-  #in the output, A,B are concatenated column-wise into "AB"=[A,B]
-  #posterior params are for the concatenated matrix AB and Sigma
-  #nun,Deltan = params for posterior of Sigma
-  #M,K = params for posterior of AB given Sigma
-  d<-nrow(Y)
-  N<-ncol(Y)
-  Saxx<-X%*%t(X)+K_A
-  Sbxx<-diag(N)+K_B
-  Syx1<-Y%*%t(X)+M_A%*%K_A
-  Syx2<-Y+M_B%*%K_B
-  Omega_a<-Saxx-X%*%solve(Sbxx,t(X))
-  Omega_b<-Sbxx-t(X)%*%solve(Saxx,X)
-  Sxx<-rbind(cbind(Saxx,X),cbind(t(X),Sbxx))
-  OaiSyx1t<-solve(Omega_a,t(Syx1))
-  SxxiSyxt<-rbind(OaiSyx1t-solve(Omega_a,X)%*%solve(Sbxx,t(Syx2)),
-                  solve(Omega_b,t(Syx2))-solve(Sbxx,t(X))%*%OaiSyx1t)
-  #M<-t(SxxiSyxt)
-  #K<-Sxx
-  Syy<-Y%*%t(Y)+M_A%*%K_A%*%t(M_A)+M_B%*%K_B%*%t(M_B)
-  Sybarx<-Syy-cbind(Syx1,Syx2)%*%SxxiSyxt
-  return(list(M=t(SxxiSyxt),K=Sxx,nun=nu0+N,Deltan=Delta0+Sybarx))
-}
-
-res<-bayes_mlinreg_post(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0)
-#posterior mean of covariance matrix Sigma
-res$Deltan/(res$nun-d-1)
-#posterior mean of A
-res$M[,1:4]
-#posterior mean of B
-res$M[,5:20]
+#run sampler
+res<-bayes_mlinreg_post(Y,X,nBurn=1000,nSample=1000)
+#extract posterior means
+Ahat<-list_mean(res,function(x){x[["A"]]})
+Bhat<-list_mean(res,function(x){x[["B"]]})
+Sigmahat<-list_mean(res,function(x){x[["Sigma"]]})
+#calculate mean square error for posterior means of params
+mse(Ahat,A)
+mse(Bhat,B)
+mse(Sigmahat,Sigma)
 ```
+
+We see that estimates of the dynamical parameters A and B are accurate but the estimate of the $\Sigma$ parameter tends to overshoot. Overall the function seems to perform as expected.
