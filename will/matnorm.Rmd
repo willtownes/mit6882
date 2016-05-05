@@ -62,4 +62,45 @@ mse(Q*trace(V),list_mean(res2,function(x){t(x-M)%*%(x-M)}))
 ### Bayesian Multivariate Linear Regression
 
 Fox Thesis Section 2.4.4 shows that the matrix normal- inverse wishart prior is conjugate to the multivariate linear regression likelihood. The probability model is:
-$$Y\sim\mathcal{MN}(AX+B$$
+$$Y\sim\mathcal{MN}(AX+B,\Sigma,I)$$
+$$\Sigma\sim\mathcal{IW}(\nu,\Delta)$$
+$$A|\Sigma\sim\mathcal{MN}(M_A,\Sigma,K_A)$$
+$$B|\Sigma\sim\mathcal{MN}(M_B,\Sigma,K_B)$$
+For more detailed derivations, refer to the LDS block sampler latex/pdf files.
+
+```{r}
+#true values, similar to those from LDS.Rmd
+k<-2 #seconds between observations
+a<-c(0,-9.8) #acceleration
+A<-diag(4)
+A[1:2,3:4]<-k*diag(2)
+B<-rbind(.5*k^2*diag(2),k*diag(2))%*%a
+B<-B%*%rep(1,20) #copy vector many times to make a matrix
+Sigma<-diag(c(20,20,10,10))
+#generate fake data
+X<-matrix(runif(80,-20,20),nrow=4)
+Y<-rmatnorm(1,A%*%X+B,Sigma,diag(20))[[1]]
+
+#default hyperparameter settings
+d<-nrow(Y)
+N<-ncol(Y)
+nu0<-d+2
+Delta0<-diag(d)
+M_A<-matrix(0,nrow=d,ncol=d)
+M_B<-matrix(0,nrow=d,ncol=N)
+K_A<-diag(d)
+K_B<-diag(N)
+#Given hyperparameters and data, compute parameters of the posterior
+#input: Y=outcome matrix
+#X=input matrix
+#model: Y=AX+B+E with E~MN(0,Sigma,I)
+#nu0,Delta0=hyperparameters of Sigma
+#M_A,K_A=hyperparameters of transition matrix A
+#M_B,K_B=hyperparameters of additive matrix B
+#output: list of parameters of the posterior
+#in the output, A,B are concatenated column-wise into "AB"=[A,B]
+#posterior params are for the concatenated matrix AB and Sigma
+#nun,Deltan = params for posterior of Sigma
+#M,K = params for posterior of AB given Sigma
+
+```
