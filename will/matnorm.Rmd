@@ -85,7 +85,7 @@ Y<-rmatnorm(1,A%*%X+B,Sigma,diag(20))[[1]]
 d<-nrow(Y)
 N<-ncol(Y)
 nu0<-d+2
-Delta0<-diag(d)
+Delta0<-.75*cov(t(Y))
 M_A<-matrix(0,nrow=d,ncol=d)
 M_B<-matrix(0,nrow=d,ncol=N)
 K_A<-diag(d)
@@ -124,5 +124,10 @@ bayes_mlinreg_post<-function(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0){
 }
 
 res<-bayes_mlinreg_post(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0)
-res
+#posterior mean of covariance matrix Sigma
+res$Deltan/(res$nun-d-1)
+#posterior mean of A
+res$M[,1:4]
+#posterior mean of B
+res$M[,5:20]
 ```
