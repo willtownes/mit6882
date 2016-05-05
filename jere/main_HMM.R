@@ -12,11 +12,11 @@ pars[[2]]$Sigma <- pars[[2]]$Sigma/3000
 
 
 set.seed(100)
-z_true <- 
-  HMM_z(gamma = 1, alpha = 10, kappa = 10, 
-        K = 2, T = 100)
+# z_true <- 
+#   HMM_z(gamma = 1, alpha = 10, kappa = 10, 
+#         K = 2, T = 100)
 
-#z_true <- c(rep(1, 30), rep(2, 30), rep(1, 30), rep(2, 30))
+z_true <- c(rep(1, 30), rep(2, 30), rep(1, 30), rep(2, 30))
 dat <- HMM_SLDS(z_true, pars)
 
 plot(dat$Y, col = dat$Z, pch = 19)
