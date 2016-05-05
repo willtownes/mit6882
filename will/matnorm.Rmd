@@ -90,17 +90,39 @@ M_A<-matrix(0,nrow=d,ncol=d)
 M_B<-matrix(0,nrow=d,ncol=N)
 K_A<-diag(d)
 K_B<-diag(N)
-#Given hyperparameters and data, compute parameters of the posterior
-#input: Y=outcome matrix
-#X=input matrix
-#model: Y=AX+B+E with E~MN(0,Sigma,I)
-#nu0,Delta0=hyperparameters of Sigma
-#M_A,K_A=hyperparameters of transition matrix A
-#M_B,K_B=hyperparameters of additive matrix B
-#output: list of parameters of the posterior
-#in the output, A,B are concatenated column-wise into "AB"=[A,B]
-#posterior params are for the concatenated matrix AB and Sigma
-#nun,Deltan = params for posterior of Sigma
-#M,K = params for posterior of AB given Sigma
 
+bayes_mlinreg_post<-function(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0){
+  #Given hyperparameters and data, compute parameters of the posterior
+  #input: Y=outcome matrix
+  #X=input matrix
+  #model: Y=AX+B+E with E~MN(0,Sigma,I)
+  #nu0,Delta0=hyperparameters of Sigma
+  #M_A,K_A=hyperparameters of transition matrix A
+  #M_B,K_B=hyperparameters of additive matrix B
+  #output: list of parameters of the posterior
+  #in the output, A,B are concatenated column-wise into "AB"=[A,B]
+  #posterior params are for the concatenated matrix AB and Sigma
+  #nun,Deltan = params for posterior of Sigma
+  #M,K = params for posterior of AB given Sigma
+  d<-nrow(Y)
+  N<-ncol(Y)
+  Saxx<-X%*%t(X)+K_A
+  Sbxx<-diag(N)+K_B
+  Syx1<-Y%*%t(X)+M_A%*%K_A
+  Syx2<-Y+M_B%*%K_B
+  Omega_a<-Saxx-X%*%solve(Sbxx,t(X))
+  Omega_b<-Sbxx-t(X)%*%solve(Saxx,X)
+  Sxx<-rbind(cbind(Saxx,X),cbind(t(X),Sbxx))
+  OaiSyx1t<-solve(Omega_a,t(Syx1))
+  SxxiSyxt<-rbind(OaiSyx1t-solve(Omega_a,X)%*%solve(Sbxx,t(Syx2)),
+                  solve(Omega_b,t(Syx2))-solve(Sbxx,t(X))%*%OaiSyx1t)
+  #M<-t(SxxiSyxt)
+  #K<-Sxx
+  Syy<-Y%*%t(Y)+M_A%*%K_A%*%t(M_A)+M_B%*%K_B%*%t(M_B)
+  Sybarx<-Syy-cbind(Syx1,Syx2)%*%SxxiSyxt
+  return(list(M=t(SxxiSyxt),K=Sxx,nun=nu0+N,Deltan=Delta0+Sybarx))
+}
+
+res<-bayes_mlinreg_post(Y,X,M_A,M_B,K_A,K_B,nu0,Delta0)
+res
 ```
