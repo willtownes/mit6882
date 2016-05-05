@@ -22,9 +22,6 @@ dat <- HMM_SLDS(z_true, pars)
 plot(dat$Y, col = dat$Z, pch = 19)
 z_true <- dat$Z
 
-# generate y
-
-
 # run HMM assume true parameters known
 # warning: message explode if too many obs on one mode
 
