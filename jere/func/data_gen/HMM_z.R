@@ -1,30 +1,17 @@
 library(MASS)
 library(magrittr)
 
-HMM_gauss <- 
+HMM_z <- 
   function(
     gamma = 100, alpha = 10, kappa = 1, 
-    K = 100, T = 100, 
-    d_gauss = 1, cor_gauss = 0.2, var_gauss = 1
+    K = 100, T = 100
   )
   {
-    # Hidden Markov Model with MV Gaussian Emissions
+    # generate mode allocation for Hidden Markov Model
     
     # K: number of states
     # T: number of time points
     # d: dimension of MVN emission
-    
-    # 0 candidate parameters
-    theta_0 <- 
-      lapply(1:K, 
-             function(k) rep(k, d_gauss))
-    Sigma_0 <- 
-      lapply(1:K, 
-             function(k) 
-               cov_matrix(d = d_gauss, 
-                          cor_mean = cor_gauss, 
-                          var_mean = var_gauss)
-      )
     
     # 1 Draw G_0, a dataframe of theta - beta
     beta_0 <- rGEM(K, alpha = gamma)
@@ -60,21 +47,5 @@ HMM_gauss <-
       Z_T[t] <- rMulti(1, beta_prev)
     }
     
-    # 4. generate data
-    X_T <- 
-      lapply(Z_T, 
-             function(z) 
-               rmvnorm(1, theta_0[[z]], Sigma_0[[z]])
-      ) %>% do.call(rbind, .)
-    
-    # plot(X_T)
-    
-    # return sample
-    list(X = X_T, Z = Z_T, 
-         Theta = 
-           lapply(1:K,
-                  function(i) 
-                    list(mean = theta_0[[i]], cov = Sigma_0[[i]])
-           )
-    )
+    Z_T
   }

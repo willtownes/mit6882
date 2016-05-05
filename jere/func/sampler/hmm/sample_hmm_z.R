@@ -19,7 +19,7 @@ sample_hmm_z <-
     ######################################################    
   {
     #### 0. initialize parameters ####
-    n <- nrow(y)
+    T <- nrow(y)
     d <- ncol(y)
     K <- length(m)
 
@@ -28,15 +28,13 @@ sample_hmm_z <-
     # (last col reserved for initial value)
     # SLOOOOWWWWWWWWW
     m_KT <- 
-      backward_message(y, theta, pk, 
-                       log_lik_func, 
-                       verbose)
+      backward_message(y, x, z,
+                       theta, pk, log_lik_func, verbose)
     
     #### 2. assemble forward likelihood  ####
     f_KT <- # a state*time prob matrix
-      forward_prob(y, z, theta, pk, 
-                   log_lik_func, m_KT, 
-                   verbose)
+      forward_prob(y, x, z, m_KT, 
+                   theta, pk, log_lik_func, verbose)
     
     #### 3. perform forward sampling  ####
     z_new <- 

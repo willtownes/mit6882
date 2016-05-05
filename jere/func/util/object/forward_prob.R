@@ -2,9 +2,13 @@ library(matrixStats) #logSumExp functions
 
 # generate forward probability 
 forward_prob <- 
-  function(x, z, lambda, pk, log_lik_func, msg, verbose){
+  function(y, x, z, msg,
+           theta, pk, 
+           log_lik_func, verbose)
+  {
+    T <- nrow(y)
     K <- nrow(pk)
-    T <- nrow(x)
+    lpk <- log(pk)
     
     # initialize message, a state*time matrix size K*T
     prob <- matrix(NaN, nrow = K, ncol = T)
@@ -14,19 +18,21 @@ forward_prob <-
       cat("\n Forward Message Passing:\n")
       pb <- txtProgressBar(0, T, style = 3)
     }
+    
     for (t in 1:T){
       if (verbose) setTxtProgressBar(pb, t)
       prob_mat <- # state-dish message matrix
         sapply(1:K,
                function(k){
-                 # handle z_{t-1} for t = 1
+                 # assume z[0] = z[1]
                  z_prev <- ifelse(t==1, z[1], z[t-1])
-                 # compute
+                 # compute (NOTE: x[t, ] refer to x at t-1)
                  log(pk[z_prev, k]) +
-                   log_lik_func(x[t, ], lambda[[k]]) + 
+                   log_lik_func(x[t+1, ], x[t, ], theta[[k]]) + 
                    msg[k, t+1]
                }
         )
+      
       prob_mat <- # normalize
         prob_mat - logSumExp(prob_mat)
       

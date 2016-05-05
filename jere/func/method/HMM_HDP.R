@@ -2,25 +2,27 @@
 HMM_HDP <- 
   function(
     # data, restaurant number, dish number
-    y, K = 10,
+    y, K = 2,
     # emission measure & parameters
     log_lik_func = NULL, 
     sample_emiss = FALSE, 
     theta_init = NULL, theta_sampler = NULL, 
     lambda_init = NULL, lambda_sampler = NULL,
-    x_sampler = NULL,
+    x_init = NULL, x_sampler = NULL,
     # DP concentration/base-measure
     sample_hyper = FALSE,
     gamma = 1, alpha = NULL, kappa = NULL, 
     # initialization
-    x_init = NULL, z_init = NULL, m_init = NULL, 
+    z_init = NULL, m_init = NULL, 
     p0_init = NULL, pk_init = NULL,
     # MCMC parameter
-    iter_max = 2e3, iter_update = 10, verbose = FALSE)
+    iter_max = 1e3, iter_update = 10, verbose = FALSE)
   {
     # INPUT:
     # K:              max number of states
     # log_lik_func:   log emission dist likelihood
+    # x_init:         initial for latent obs including time 0
+    #                 (T+1) x d df
     # theta_init:     initial for state-specific emission parameters, 
     #                 1:K list
     # lambda_init:    initial for state-invariant emission par, list
@@ -30,8 +32,8 @@ HMM_HDP <-
     T <- nrow(y)
     d <- ncol(y)
     
-    if (is.null(theta_init)|is.null(lambda_init)) 
-      stop("emission parameters for theta/lambda must be supplied")
+    if (is.null(x_init)|is.null(theta_init)|is.null(lambda_init)) 
+      stop("initial values for x/theta/lambda must be supplied")
     if (is.null(theta_sampler)|is.null(lambda_sampler)) 
       stop("emission samplers for theta/lambda must be supplied")
     if (length(theta_init) != K)
@@ -43,8 +45,6 @@ HMM_HDP <-
     
     #### 1. Initialization ####
     #### > 1.1 default initialization (random assignment) ====
-    if (is.null(x_init)) # random assign 
-      x_init <- rmvnorm(T, rep(0, d), diag(d))
     if (is.null(z_init)) # random assign 
       z_init <- sample(1:K, T, replace = TRUE)
     if (is.null(m_init)) # equal table number
@@ -145,22 +145,24 @@ HMM_HDP <-
         )     
       
       #### 2.4 theta & lambda: emission par ====
-      # to be plugged in
-      theta_new <- 
-        theta_sampler(
-          y, log_lik_func, 
-          z = z_new, m = m_new, x = x_new,
-          p0 = p0_new, pk = pk_new,          
-          theta = theta_cur, lambda = lambda_cur,
-          hyper = hyper_cur)       
-      
-      lambda_new <- 
-        lambda_sampler(
-          y, log_lik_func, 
-          z = z_new, m = m_new, x = x_new,
-          p0 = p0_new, pk = pk_new,          
-          theta = theta_new, lambda = lambda_cur,
-          hyper = hyper_cur) 
+      if (sample_emiss){
+        # to be plugged in
+        theta_new <- 
+          theta_sampler(
+            y, log_lik_func, 
+            z = z_new, m = m_new, x = x_new,
+            p0 = p0_new, pk = pk_new,          
+            theta = theta_cur, lambda = lambda_cur,
+            hyper = hyper_cur)       
+        
+        lambda_new <- 
+          lambda_sampler(
+            y, log_lik_func, 
+            z = z_new, m = m_new, x = x_new,
+            p0 = p0_new, pk = pk_new,          
+            theta = theta_new, lambda = lambda_cur,
+            hyper = hyper_cur) 
+      }
       
       #### 2.5 hyperparameters ====
       # sample new hyperpar & insert into the list 'hyper'
@@ -209,7 +211,7 @@ HMM_HDP <-
       }
       
       if (ii %% iter_update == 0){
-        plot(y[, 1], col = z_cur, pch = 19,
+        plot(y, col = z_cur, pch = 19,
              main = paste0(ii, ", K = ", length(m_cur))
         )
       }
