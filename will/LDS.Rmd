@@ -100,7 +100,7 @@ In the above plot, the dark line is the true path, the points are the noisy obse
 ```{r}
 x_0<-c(-5,-5,250,250)
 # save data for use elsewhere
-save(pars,x_true,z,x_0,file="will_dat.RData")
+#save(pars,x_true,z,x_0,file="will_dat.RData")
 ```
 
 ### Sampling Trajectory with Unknown Dynamical Parameters
