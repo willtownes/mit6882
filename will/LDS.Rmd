@@ -107,7 +107,7 @@ x_0<-c(-5,-5,250,250)
 
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
-```{r}
+```{r, eval=FALSE}
 z<-c(rep(1,iter_max),rep(2,100))
 pars<-list()
 pars[[1]]<-list("A"=A,"B"=B,"Sigma"=Sigma) #concave parabola
@@ -121,5 +121,4 @@ bayes_mlinreg_post(Y,X)
 xs<-rLDS(100,y,z,pars,C,R) #100 samples from the joint posterior
 # munge res into ggplot compatible format
 xs<-rLDS_melt(xs,colnames(x))
-
 ```
