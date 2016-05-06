@@ -74,6 +74,9 @@ plot(x[,1],x[,2],type="l")
 points(y[,1],y[,2])
 ```
 
+
+### Sampling Trajectory with Known Dynamical Parameters
+
 The curve indicates the true (discretized) trajectory, the circles represent the noisy observations. The task now is to try to infer the curve given only the circles. We apply the backwards message passing, forwards sampling approach of Fox et al. The backwards message passing algorithm is Algorithm 19 in Fox's thesis. Key functions are defined in util.R. We show some tests of the functions here:
 
 ```{r}
@@ -100,3 +103,23 @@ x_0<-c(-5,-5,250,250)
 save(pars,x_true,z,x_0,file="will_dat.RData")
 ```
 
+### Sampling Trajectory with Unknown Dynamical Parameters
+
+We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
+
+```{r}
+z<-c(rep(1,iter_max),rep(2,100))
+pars<-list()
+pars[[1]]<-list("A"=A,"B"=B,"Sigma"=Sigma) #concave parabola
+pars[[2]]<-list("A"=A2,"B"=B2,"Sigma"=Sigma) #linear motion, slight increase
+K<-length(pars)
+#split data into chunks based on z
+
+#run linear regression sampler on each chunk
+bayes_mlinreg_post(Y,X)
+#run kalman smoother/sampler
+xs<-rLDS(100,y,z,pars,C,R) #100 samples from the joint posterior
+# munge res into ggplot compatible format
+xs<-rLDS_melt(xs,colnames(x))
+
+```
