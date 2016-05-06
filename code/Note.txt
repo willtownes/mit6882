@@ -1,0 +1,2 @@
+1. x (the latent observations) is a (T+1)x(d) data frame, with the first row indicate x at time 0.
+2. msg (backward message) is a (T+1)x(d) data frame, with the last row indicate message at time T+1.
