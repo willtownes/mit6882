@@ -37,5 +37,5 @@ Results
 Conclusion/Future Direction
 ---------------------------
 
--	Hyperparameters   &nbsp;&nbsp;&nbsp; **(Jeremiah)**
--	Automatic Relevance Determination    &nbsp;&nbsp;&nbsp; **(Will)**
+-	[ ] Hyperparameters   &nbsp;&nbsp;&nbsp; **(Jeremiah)**
+-	[ ] Automatic Relevance Determination    &nbsp;&nbsp;&nbsp; **(Will)**
