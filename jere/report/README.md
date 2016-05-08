@@ -5,17 +5,17 @@ Introduction
 ------------
 
 -	[ ] Motivation - Types of data to apply to *(Jeremiah)*
--	[ ] Overall Graphic Model, & Notation*(Jeremiah)*
--	[ ] Brief Technical Overview*(Will)*
+-	[ ] Overall Graphic Model, & Notation *(Jeremiah)*
+-	[ ] Brief Technical Overview *(Will)*
 
 Methods
 -------
 
--	HDP
+-	HDP *(Jeremiah)*
 	-	[ ] Example
--	HDP-HMM (given DS parameter)
+-	HDP-HMM (given DS parameter) *(Jeremiah)*
 	-	[ ] Example
--	SLDS
+-	SLDS  *(Will)*
 	-	[ ] Example
 -	HDP-HMM-SLDS
 	-	[ ] Example
@@ -23,13 +23,13 @@ Methods
 Results
 -------
 
--	HDP
+-	HDP  *(Jeremiah)*
 	-	[ ] Membership Illustration
 	-	[ ] Estimated vs True Correlation Matrix
--	HDP-HMM (given DS parameters)
+-	HDP-HMM (given DS parameters)  *(Jeremiah)*
 	-	[ ] Trajectory
 	-	[ ] Sample Path
--	SLDS
+-	SLDS  *(Will)*
 	-	[ ] Example
 -	HDP-HMM-SLDS
 	-	[ ] Example
@@ -37,5 +37,5 @@ Results
 Conclusion/Future Direction
 ---------------------------
 
--	Hyperparameters
--	Automatic Relevance Determination
+-	Hyperparameters  *(Jeremiah)*
+-	Automatic Relevance Determination   *(Will)*
