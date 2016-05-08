@@ -4,15 +4,9 @@ Report Structure
 Introduction
 ------------
 
--	[ ] Mercury
--	[x] Venus
--	[x] Earth (Orbit/Moon)
--	[x] Mars
--	[ ] Jupiter
--	[ ] Saturn
--	[ ] Uranus
--	[ ] Neptune
--	[ ] Comet Haley
+-	[ ] $\circ$ Motivation - Types of data to apply to
+-	[ ] Overall Graphic Model, & Notation
+-	[x] Brief Technical Overview
 
 Methods
 -------
