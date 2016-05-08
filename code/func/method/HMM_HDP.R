@@ -43,6 +43,15 @@ HMM_HDP <-
         stop("sample_emiss = TRUE but lambda/theta sampler not supplied")
     }
     
+    if (class(y)!= 'matrix'){
+      warning('HMM_HDP: y is not in matrix format. Converted')
+      y <- as.matrix(y)
+    }
+    if (class(x_init)!= 'matrix'){
+      warning('HMM_HDP: x_init is not in matrix format. Converted')
+      x_init <- as.matrix(x_init)
+    }
+    
     #### 1. Initialization ####
     #### > 1.1 default initialization (random assignment) ====
     if (is.null(z_init)) # random assign 
@@ -92,6 +101,7 @@ HMM_HDP <-
       setTxtProgressBar(pb, ii)
       
       #### 2.1 x: pseudo obs for SLDS ====
+      # TODO
       x_new <-
         x_sampler(
           y, log_lik_func, 
@@ -146,7 +156,7 @@ HMM_HDP <-
       
       #### 2.4 theta & lambda: emission par ====
       if (sample_emiss){
-        # to be plugged in
+        # TODO
         theta_new <- 
           theta_sampler(
             y, log_lik_func, 
