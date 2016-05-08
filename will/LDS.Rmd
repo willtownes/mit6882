@@ -6,7 +6,6 @@ output: html_document
 ---
 
 ```{r}
-#library(mvtnorm)
 library(ggplot2)
 source("util.R") #all LDS functions defined here
 ```
@@ -62,8 +61,6 @@ z<-rep(1,iter_max)
 xy<-gen_lds(z,x0,theta,lambda) #function from util.R
 x<-xy[["x"]]
 y<-xy[["y"]]
-#colnames(x_full)<-c("pos_horiz","pos_vert","velo_horiz","velo_vert")
-#colnames(y_full)<-c("pos_horiz","pos_vert")
 plot(x[,1],x[,2],type="l",main="Noisy Projectile Motion",xlab="Horizontal Position",ylab="Vertical Position")
 points(y[,1],y[,2])
 ```
@@ -72,9 +69,11 @@ The projectile motion is a noisy version of a parabolic trajectory. We now illus
 
 ```{r}
 #dynamical parameters for linear motion
-theta[[2]]<-list(A=diag(4),B=c(20,20,0,0),Sigma=Sigma)
+theta[[2]]<-list(A=diag(4),B=c(5,5,0,0),Sigma=Sigma)
+lambda0<-lambda
+lambda[["R"]]<-R/100
 z<-rep(2,100)
-xy<-gen_lds(z,x_full[iter_max,],theta,lambda)
+xy<-gen_lds(z,x0,theta,lambda)
 x<-xy[["x"]]
 y<-xy[["y"]]
 plot(x[,1],x[,2],type="l",main="Noisy Linear Motion",xlab="Horizontal Position",ylab="Vertical Position")
@@ -87,12 +86,14 @@ The curve indicates the true (discretized) trajectory, the circles represent the
 
 ```{r}
 #dynamical parameters for linear motion
-theta[[2]]<-list(A=diag(c(1,1,0,0)),B=c(200,50,0,0),Sigma=Sigma)
-z2<-rep(2,100)
-xy<-gen_lds(z2,x[iter_max,],theta,lambda) 
-x<-rbind(x,xy[["x"]])
-y<-rbind(y,xy[["y"]])
-z<-c(z,z2)
+theta[[2]]<-list(A=diag(4),B=c(100,5,0,0),Sigma=Sigma)
+lambda<-lambda0
+z<-c(rep(1,100),rep(2,100))
+xy<-gen_lds(z,x0,theta,lambda)
+x<-xy[["x"]]
+y<-xy[["y"]]
+colnames(x)<-c("pos_horiz","pos_vert","velo_horiz","velo_vert")
+colnames(y)<-c("pos_horiz","pos_vert")
 xs<-rLDS(100,y,z,theta,lambda) #100 samples from the joint posterior
 # munge res into ggplot compatible format
 xs<-rLDS_melt(xs,colnames(x))
@@ -101,7 +102,7 @@ xs<-rLDS_melt(xs,colnames(x))
 #points(y[,1],y[,2],col="green")
 x_true<-as.data.frame(x)
 y_obs<-as.data.frame(y)
-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,size=1.3,aes(colour=factor(z)))+geom_point(data=y_obs,aes(colour=factor(z)))+theme_bw()
+ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
 ```
 
 In the above plot, the dark line is the true path, the points are the noisy observations, and the gray lines are samples from the posterior. We see that the posterior sampler does a good job capturing the dynamics of the projectile.
@@ -109,27 +110,73 @@ In the above plot, the dark line is the true path, the points are the noisy obse
 ```{r}
 x_0<-c(-5,-5,250,250)
 # save data for use elsewhere
-#save(pars,x_true,z,x_0,file="will_dat.RData")
+#save(theta,x_true,z,x_0,file="will_dat.RData")
 ```
 
 ### Switching Projectile Motion Inference with Unknown Dynamical Parameters
 
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
-```{r, eval=FALSE}
-z<-c(rep(1,iter_max),rep(2,100))
-pars<-list()
-pars[[1]]<-list("A"=A,"B"=B,"Sigma"=Sigma) #concave parabola
-pars[[2]]<-list("A"=A2,"B"=B2,"Sigma"=Sigma) #linear motion, slight increase
-K<-length(pars)
-#split data into chunks based on z
+```{r}
+ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
+theta_true<-theta
+K<-2 #number of dynamical modes
+D<-4 #dimension of latent state
+ydim<-ncol(y)
+nIter<-nrow(y)
+xhat_latent<-matrix(rcauchy(nIter*(D-ncol(y))),nrow=nIter)
+xhat<-cbind(y,xhat_latent) #initialize sampled x
+#split data into chunks based on z and initialize dynamical params "theta"
+theta_hat<-list()
+lambda_hat<-lambda
+for(k in 1:K){
+  z_index<-which(z==k)
+  theta_hat[[k]]<-list()
+  psi<-xhat[z_index,]
+  if(1 %in% z_index){
+    z_index<-z_index[z_index!=1] #omit 1
+    psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
+  } else {
+    psibar<-xhat[z_index-1,]
+  }
+  lm_init<-lm(psi~psibar) #multivariate linreg
+  theta_hat[[k]][["A"]]<-0.5*t(coef(lm_init))[,2:(D+1)]+.5*diag(D)
+  theta_hat[[k]][["B"]]<-0.5*t(coef(lm_init))[,1]
+  theta_hat[[k]][["Sigma"]]<-0.5*diag(unlist(lapply(summary(lm_init),function(x){x$sigma^2})))
+}
+avg_Sigma<-list_mean(theta_hat,function(x){x[["Sigma"]]})
+lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim]
+
+#now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
+
+#set hyperparameters for prior, these are adaptively updated later by empirical bayes
+# nu0=D+2
+# var_est<-mean(diag(cov(y)))
+# Delta0=.75*var_est*diag(D) #rough estimate
+# kappa0=.01
+# M_A<-matrix(0,nrow=D,ncol=D)
+# M_B<-rep(0,D)
+# K_A<-diag(rep(.1,D))
+
+#initialize dynamical parameters with samples from prior
+# for(k in 1:K){
+#   theta[[k]][["Sigma"]]<-Sigma<-riwish(nu0,Delta0)
+#   theta[[k]][["A"]]<-rmatnorm(1,M_A,Sigma,K_A,foxpar=TRUE)[[1]]
+#   theta[[k]][["B"]]<-mvrnorm(1,M_B,Sigma/kappa0)
+# }
+
+#lambda[["C"]] regarded as known
+xhat<-rLDS(1,y,z,theta_hat,lambda_hat)
+xhat_plt<-rLDS_melt(xhat,colnames(x))
+#visualize sample trajectory
+ggbase+geom_path(data=xhat_plt,colour="grey",aes(group="id"))
 
 #run linear regression sampler on each chunk
-bayes_mlinreg_post(Y,X)
+#bayes_mlinreg_post(Y,X)
 #run kalman smoother/sampler
-xs<-rLDS(100,y,z,pars,C,R) #100 samples from the joint posterior
+
 # munge res into ggplot compatible format
-xs<-rLDS_melt(xs,colnames(x))
+xhat<-
 ```
 
 ### Harmonic Motion with Known Dynamical Parameters
@@ -143,7 +190,7 @@ where
 $$A=\begin{pmatrix}1&0&0&0\\0&1&0&\Delta t\\0&0&1&0\\0& -k\Delta t & 0 & 1\end{pmatrix}$$
 The constant horizontal motion is achieved by setting $B=(r\Delta t,0,0,k L \Delta t )'$ where $r$ is the fixed horizontal velocity. We now simulate two different harmonic motion patterns, with different values of $k$,$L$, and $r$. We expect that $k$ affects the amplitude while $r$ affects the frequency of the motion. 
 
-```{r}
+```{r eval=FALSE}
 k<-.01; L<-100; r<-100
 z<-rep(3,1000)
 A<-diag(4)
@@ -164,7 +211,7 @@ This kind of "blowing up" behavior is an artifact of the discretization of the d
 $$u''(t) = -k u(t) - \delta u'(t)$$
 The $\delta$ parameter causes the acceleration to tend toward zero. In terms of the linear dynamical system representation, this corresponds with replacing the one on the diagonal with $1-\delta$ in the fourth position (the vertical velocity position).
 
-```{r}
+```{r eval=FALSE}
 k<-.01; L<-100; r<-100; delta<-2
 z<-rep(3,1000)
 A<-diag(4)
