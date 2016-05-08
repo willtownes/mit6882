@@ -4,18 +4,18 @@ Report Structure
 Introduction
 ------------
 
--	[ ] Motivation - Types of data to apply to *(Jeremiah)*
--	[ ] Overall Graphic Model, & Notation *(Jeremiah)*
--	[ ] Brief Technical Overview *(Will)*
+-	[ ] Motivation - Types of data to apply to &nbsp;&nbsp;&nbsp; **(Jeremiah)**
+-	[ ] Overall Graphic Model, & Notation &nbsp;&nbsp;&nbsp; **(Jeremiah)**
+-	[ ] Brief Technical Overview &nbsp;&nbsp;&nbsp; **(Will)**
 
 Methods
 -------
 
--	HDP *(Jeremiah)*
+-	HDP &nbsp;&nbsp;&nbsp; **(Jeremiah)**
 	-	[ ] Example
--	HDP-HMM (given DS parameter) *(Jeremiah)*
+-	HDP-HMM (given DS parameter) &nbsp;&nbsp;&nbsp; **(Jeremiah)**
 	-	[ ] Example
--	SLDS  *(Will)*
+-	SLDS   &nbsp;&nbsp;&nbsp; **(Will)**
 	-	[ ] Example
 -	HDP-HMM-SLDS
 	-	[ ] Example
@@ -23,13 +23,13 @@ Methods
 Results
 -------
 
--	HDP  *(Jeremiah)*
+-	HDP   &nbsp;&nbsp;&nbsp; **(Jeremiah)**
 	-	[ ] Membership Illustration
 	-	[ ] Estimated vs True Correlation Matrix
--	HDP-HMM (given DS parameters)  *(Jeremiah)*
+-	HDP-HMM (given DS parameters)   &nbsp;&nbsp;&nbsp; **(Jeremiah)**
 	-	[ ] Trajectory
 	-	[ ] Sample Path
--	SLDS  *(Will)*
+-	SLDS   &nbsp;&nbsp;&nbsp; **(Will)**
 	-	[ ] Example
 -	HDP-HMM-SLDS
 	-	[ ] Example
@@ -37,5 +37,5 @@ Results
 Conclusion/Future Direction
 ---------------------------
 
--	Hyperparameters  *(Jeremiah)*
--	Automatic Relevance Determination   *(Will)*
+-	Hyperparameters   &nbsp;&nbsp;&nbsp; **(Jeremiah)**
+-	Automatic Relevance Determination    &nbsp;&nbsp;&nbsp; **(Will)**
