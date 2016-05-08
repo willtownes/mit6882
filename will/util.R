@@ -32,7 +32,6 @@ list_mean<-function(x,f=NULL){
 ### Multivariate and Matrix Normal Sampling
 # see matnorm.Rmd for examples/ visual tests
 # see also speed_tests.Rmd
-
 rmvnorm_info<-function(n,theta,Lambda,D=length(theta)){
   # sample n variates from multivariate normal in "information form"
   # theta="offset" and Lambda="information matrix"
@@ -276,19 +275,37 @@ sample_hidden_states<-function(msg_b,elps,transition,pi0=NULL,categs=NULL){
 
 ### Linear Dynamical System Functions
 # test code/ examples are in LDS.Rmd
-rmvnorm_info<-function(n,theta,Lambda){
-  # returns n by d matrix. n=number of replicates
-  # d=dimension of multivariate normal
-  # theta= offset parameter
-  # Lambda = information matrix
-  # special case of n=1, returns a vector, otherwise, a matrix
-  S<-solve(Lambda)
-  m<-solve(Lambda,theta)
-  if(n>1){
-    return(rmvnorm(n,m,S))
-  } else {
-    return(drop(rmvnorm(n,m,S)))
+gen_lds<-function(z,x0,theta,lambda){
+  # create simulated data for linear 
+  # z is sequence of hidden mode indicators (integers)
+  # x1 is initial position (a vector)
+  # Given dynamical parameters eg theta[[1]]=list(A,B,Sigma)
+  # theta[z[t]] tells dynamical regime at time t
+  # emissions noise is in lambda. lambda[["R"]] is the matrix of interest
+  # observation matrix is in lambda. lambda[["C"]].
+  # returns a data matrix x with latent trajectory
+  # also returns data matrix y with observed trajectory
+  nIter<-length(z)
+  xdim<-length(x0)
+  R<-lambda[["R"]]
+  C<-lambda[["C"]]
+  ydim<-nrow(C)
+  x<-matrix(NA,nrow=nIter,ncol=xdim) #eg, position and velocity
+  y<-matrix(NA,nrow=nIter,ncol=ydim) #eg, observed position
+  for(t in 1:nIter){
+    theta_t<-theta[[z[t]]]
+    A<-theta_t[["A"]]
+    B<-theta_t[["B"]]
+    Sigma<-theta_t[["Sigma"]]
+    if(t==1){
+      x_prev<-x0
+    } else {
+      x_prev<-x[(t-1),]
+    }
+    x[t,]<-rmvnorm(1,drop(A%*%x_prev+B),Sigma)
+    y[t,]<-rmvnorm(1,drop(C%*%x[t,]),R)
   }
+  return(list("x"=x,"y"=y))
 }
 
 backward_kalman_msgs<-function(y,z,pars,C,R){
@@ -371,19 +388,21 @@ fwd_kalman_sample<-function(z,pars,Lambda_00,Lambda_tt,theta_00,theta_tt,xs=NULL
   }
   return(xs)
 }
-rLDS<-function(n,y,z,pars,C,R){
+rLDS<-function(n,y,z,theta,lambda){
   # convenience wrapper for combining backward_kalman_msgs with fwd_kalman_sample
   # n is number of desired samples
   # each sample is a matrix
   # returns a list of length n
   # special case n=1, returns a single matrix
   # dim(matrix) is nrow=number of steps in time series, ncol=dim(latent state)
-  msg_b<-backward_kalman_msgs(y,z,pars,C,R)
+  C<-lambda[["C"]]
+  R<-lambda[["R"]]
+  msg_b<-backward_kalman_msgs(y,z,theta,C,R)
   L_tt<-msg_b[["info_matrix_msgs"]] #latent state dim x latent state dim
   th_tt<-msg_b[["offset_msgs"]] #Tmax by dimension of latent state
   L_00<-msg_b[["info_matrix_init"]]
   th_00<-msg_b[["offset_msg_init"]]
-  res<-replicate(n,fwd_kalman_sample(z,pars,L_00,L_tt,th_00,th_tt),simplify=FALSE)
+  res<-replicate(n,fwd_kalman_sample(z,theta,L_00,L_tt,th_00,th_tt),simplify=FALSE)
   return(res)
 }
 rLDS_melt<-function(LDS_samples,cnames=NULL){
