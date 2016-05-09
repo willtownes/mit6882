@@ -112,7 +112,7 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
 
 ### Linear Dynamical System Functions
 # test code/ examples are in LDS.Rmd
-gen_lds<-function(z,x0,theta,lambda){
+gen_lds<-function(z,x0, theta, lambda){
   # create simulated data for linear dynamical system
   # z is sequence of hidden mode indicators (integers)
   # x1 is initial position (a vector)
@@ -145,7 +145,7 @@ gen_lds<-function(z,x0,theta,lambda){
   return(list("x"=x,"y"=y))
 }
 
-backward_kalman_msgs<-function(y,z,pars,C,R){
+backward_kalman_msgs<-function(y, z, pars, C, R){
   # inputs:
   # y is a matrix where each row is an observation
   # z is a vector of mode indicators. For time-invarying dynamics, set z=rep(1,ncol(y))
