@@ -1,11 +1,13 @@
-\contentsline {section}{\numberline {1}Hierarchical Dirichlet Process}{1}{section.1}
-\contentsline {subsection}{\numberline {1.1}Model}{1}{subsection.1.1}
-\contentsline {subsection}{\numberline {1.2}Inference}{1}{subsection.1.2}
-\contentsline {subsection}{\numberline {1.3}Application: Clustering Hierarchical Gaussian Data}{2}{subsection.1.3}
-\contentsline {section}{\numberline {2}HDP for Hidden Markov Model}{3}{section.2}
-\contentsline {subsection}{\numberline {2.1}Hidden Markov Model}{3}{subsection.2.1}
-\contentsline {subsection}{\numberline {2.2}Sticky HDP}{3}{subsection.2.2}
-\contentsline {subsection}{\numberline {2.3}Inference }{3}{subsection.2.3}
-\contentsline {subsubsection}{\numberline {2.3.1}Forward-backward Message Passing}{4}{subsubsection.2.3.1}
-\contentsline {section}{\numberline {A}Chinese Restaurant Franchise}{5}{appendix.A}
-\contentsline {section}{\numberline {B}References}{6}{appendix.B}
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}
+\contentsline {section}{\numberline {2}Hierarchical Dirichlet Process}{1}{section.2}
+\contentsline {section}{\numberline {A}Hierarchical Dirichlet Process}{1}{appendix.A}
+\contentsline {subsection}{\numberline {A.1}Model}{1}{subsection.A.1}
+\contentsline {subsection}{\numberline {A.2}Inference}{1}{subsection.A.2}
+\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{2}{subsection.A.3}
+\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{3}{appendix.B}
+\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{3}{subsection.B.1}
+\contentsline {subsection}{\numberline {B.2}Sticky HDP}{3}{subsection.B.2}
+\contentsline {subsection}{\numberline {B.3}Inference }{3}{subsection.B.3}
+\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{4}{subsubsection.B.3.1}
+\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{5}{appendix.C}
+\contentsline {section}{\numberline {D}References}{6}{appendix.D}
