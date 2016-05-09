@@ -36,7 +36,7 @@ Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$
 
 ```{r}
 #parametrize the projectile motion into LDS format
-meas_err_sd<-5
+meas_err_sd<-2
 pos_noise_sd<-.5
 velo_noise_sd<-3
 k<-.1 #number of seconds between observations
@@ -115,7 +115,7 @@ x_0<-c(-5,-5,50,50)
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
 ```{r}
-ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
+ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
 theta_true<-theta
 K<-2 #number of dynamical modes
 D<-4 #dimension of latent state
@@ -152,16 +152,20 @@ avg_Sigma<-list_mean(theta_hat,function(x){x[["Sigma"]]})
 lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim]
 lambda_hat[["R"]]<-lambda[["R"]] #temporarily pretend this is known
 #set hyperparameters
-Delta0<-.75*diag(rep(lowess_resid_var,2))
-hp<-list(nu0=D+4,kappa0=.01,K_A=.01*diag(D),Delta0=Delta0)
+#Delta0<-.5*diag(rep(lowess_resid_var,2))
+Delta0<-diag(D)
+#Delta0<-Sigma #pretend this is known
+M_A<-diag(D)
+#M_A<-A #pretend known
+hp<-list(nu0=D+20,kappa0=10,K_A=10*diag(D),Delta0=Delta0,M_A=M_A)
 #now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
-for(j in 1:1000){
+for(j in 1:100){
   #lambda[["C"]] regarded as known
   xhat<-rLDS(1,y,z,theta_hat,lambda_hat)[[1]]
-  if(j%%100==0){
+  if(j%%25==0){
     xhat_plt<-rLDS_melt(list(xhat),colnames(x))
     #visualize sample trajectory
-    show(ggbase+geom_path(data=xhat_plt,colour="grey",aes(group="id")))
+    show(ggbase+geom_path(data=xhat_plt,linetype=2,aes(group="id")))
   }
   
   #run linear regression sampler on each chunk to update dynamic params
@@ -178,8 +182,9 @@ for(j in 1:1000){
   }
 }
 
-#lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim] #need so sample from posterior
 ```
+
+After experimenting with different hyperparameter values, we found that a strong prior is essential for stable inference. Otherwise, the dynamic matrices tend to diverge to extreme values. This is likely due to the non-stationarity of the sample path.
 
 ### Harmonic Motion with Known Dynamical Parameters
 
