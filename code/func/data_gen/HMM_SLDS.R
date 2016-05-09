@@ -1,7 +1,9 @@
 library(MASS)
 library(magrittr)
 
-HMM_SLDS <- function(Z_T, theta, lambda = NULL, d_y = 2)
+HMM_SLDS <- function(Z_T, theta, lambda = NULL, 
+                     x_0 = NULL,
+                     d_y = 2)
 {
   # Hidden Markov Model with MV Gaussian Emissions
   
@@ -17,14 +19,18 @@ HMM_SLDS <- function(Z_T, theta, lambda = NULL, d_y = 2)
   
   # 1. generate X
   X_T <- matrix(NaN, nrow = T+1, ncol = d)
-  X_T[1, ] <- 0 # initiate x_0
+  if (is.null(x_0)){
+    X_T[1, ] <- 0 # initiate x_0
+  } else {
+    X_T[1, ] <- x_0
+  }
   
   for (t in (1:T) + 1){
     z_t <- Z_T[t-1]
     mu_t <- 
       theta[[z_t]]$A %*% X_T[t-1, ] + theta[[z_t]]$B
     X_T[t, ] <- 
-      rmvnorm(1, mu_t, theta[[z_t]]$Sigma/1e3)
+      rmvnorm(1, mu_t, theta[[z_t]]$Sigma)
   }
 
   # 2. generate Y
