@@ -7,8 +7,8 @@ output: html_document
 
 ```{r}
 library(ggplot2)
-source("../code/func/sampler/lds/lds_util.R")
-source("util.R")
+source("code/func/sampler/lds/lds_util.R")
+source("will/util.R")
 ```
 
 ### Linear and Projectile Motion
@@ -153,14 +153,14 @@ avg_Sigma<-list_mean(theta_hat,function(x){x[["Sigma"]]})
 lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim]
 lambda_hat[["R"]]<-lambda[["R"]] #temporarily pretend this is known
 #set hyperparameters
-#Delta0<-.5*diag(rep(lowess_resid_var,2))
-Delta0<-diag(D)
+Delta0<-.5*diag(rep(lowess_resid_var,2))
+#Delta0<-diag(D)
 #Delta0<-Sigma #pretend this is known
 M_A<-diag(D)
 #M_A<-A #pretend known
-hp<-list(nu0=D+20,kappa0=10,K_A=10*diag(D),Delta0=Delta0,M_A=M_A)
+hp<-list(nu0=D+10,kappa0=10,K_A=10*diag(D),Delta0=Delta0)
 #now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
-for(j in 1:100){
+for(j in 1:500){
   #lambda[["C"]] regarded as known
   xhat<-rLDS(1,y,z,theta_hat,lambda_hat)[[1]]
   if(j%%25==0){

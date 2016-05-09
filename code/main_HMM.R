@@ -6,7 +6,7 @@ sourceDir("./func/")
 
 load("will_dat.RData")
 tune_will_data <- FALSE
-use_will_data <- FALSE
+use_will_data <- TRUE
 if (tune_will_data){
   theta[[1]]$B <- theta[[1]]$B/50
   theta[[1]]$Sigma <- theta[[1]]$Sigma/1000
@@ -36,16 +36,14 @@ if (use_will_data){
 y <- dat$Y
 K <- 2
 x_init <- dat$X
-x_sampler <-function(y,log_lik_func=NULL,z,m=NULL,x=NULL,p0=NULL,pk=NULL,theta,lambda,hyper=NULL){
-  #convenience wrapper to match argument signature expected by HMM_HDP main function
-  #function rLDS is under func/sampler/lds/lds_util.R
-  rLDS(1,y,z,theta,lambda)[[1]]
-}
+x_sampler<- sample_x
 
 log_lik_func <- log_lik_gauss_slds
 
 theta_init <- dat$Theta 
-lambda_init <- 0
+lambda_init <- 
+  list(R = diag(ncol(y)), 
+       C = cbind(diag(ncol(y)), matrix(0, nrow = ncol(y), ncol = ncol(x) - ncol(y))) )
 
 theta_sampler <- sample_theta
 lambda_sampler <- sample_lambda

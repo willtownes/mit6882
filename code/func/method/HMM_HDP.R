@@ -5,7 +5,7 @@ HMM_HDP <-
     y, K = 2,
     # emission measure & parameters
     log_lik_func = NULL, 
-    sample_emiss = FALSE, 
+    sample_emiss = TRUE, 
     theta_init = NULL, theta_sampler = NULL, 
     lambda_init = NULL, lambda_sampler = NULL,
     x_init = NULL, x_sampler = NULL,
@@ -34,12 +34,10 @@ HMM_HDP <-
     
     if (is.null(x_init)|is.null(theta_init)|is.null(lambda_init)) 
       stop("initial values for x/theta/lambda must be supplied")
-    if (is.null(theta_sampler)|is.null(lambda_sampler)) 
-      stop("emission samplers for theta/lambda must be supplied")
     if (length(theta_init) != K)
       stop("'theta_sampler' should be a list of length K")
     if (sample_emiss){
-      if (is.null(theta_sampler)|is.null(lambda_sampler))
+      if (is.null(theta_sampler)||is.null(lambda_sampler)||is.null(x_sampler))
         stop("sample_emiss = TRUE but lambda/theta sampler not supplied")
     }
     
