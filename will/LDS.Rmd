@@ -116,6 +116,19 @@ x_0<-c(-5,-5,50,50)
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
 ```{r}
+init_mniw_hyper<-function(y,D=ncol(y)){
+  #given an nT by D matrix of observations "y" (each row is an observation)
+  #specify the desired dimension of the latent state x
+  #returns a list of hyperparameters for the matrix normal inverse wishart prior over dynamical parameters
+  # the hyperparameters are:
+  # nu0 = prior degrees of freedom on Sigma, the transition model covariance/noise
+  # Delta0 = prior scale matrix for Sigma
+  # M_B = (vector) prior mean for additive term B in transition model
+  # kappa0 = prior sample size for B
+  # M_A = (matrix) prior mean for the transition matrix A of the latent states
+  # K_A = inverse of "column covariance" matrix in prior for A
+  # 
+}
 ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
 theta_true<-theta
 K<-2 #number of dynamical modes

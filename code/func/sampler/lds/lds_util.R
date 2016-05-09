@@ -157,7 +157,7 @@ backward_kalman_msgs<-function(y,z,pars,C,R){
   # C and R are (time-invariant) parameters for observation model
   Tmax<-nrow(y)
   #D<-ncol(y)
-  eye<-diag(ncol(A))
+  eye<-diag(ncol(y))
   #note if u=chol(R) then R=u'u, NOT uu'.
   #R^{-1} = u^{-1}u^{-T}
   #implementing Algorithm 19 from Emily Fox MIT dissertation
