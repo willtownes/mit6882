@@ -36,14 +36,14 @@ Where $C = (I,0)$ (a 2x4 matrix) and $R$ is measurement noise. We can assume $R$
 
 ```{r}
 #parametrize the projectile motion into LDS format
-meas_err_sd<-500
-pos_noise_sd<-10
-velo_noise_sd<-40
-k<-.5 #number of seconds between observations
+meas_err_sd<-5
+pos_noise_sd<-.5
+velo_noise_sd<-3
+k<-.1 #number of seconds between observations
 init_pos<-c(0,0)
-init_velo<-c(250,250)
+init_velo<-c(40,40)
 x0<-c(init_pos,init_velo)
-Tmax<-60 #number of seconds to run the simulation
+Tmax<-10 #number of seconds to run the simulation
 iter_max<-floor(Tmax/k)
 a<-c(0,-9.8) #acceleration
 A<-diag(4)
@@ -69,9 +69,7 @@ The projectile motion is a noisy version of a parabolic trajectory. We now illus
 
 ```{r}
 #dynamical parameters for linear motion
-theta[[2]]<-list(A=diag(4),B=c(5,5,0,0),Sigma=Sigma)
-lambda0<-lambda
-lambda[["R"]]<-R/100
+theta[[2]]<-list(A=diag(4),B=c(2,1,0,0),Sigma=Sigma)
 z<-rep(2,100)
 xy<-gen_lds(z,x0,theta,lambda)
 x<-xy[["x"]]
@@ -86,9 +84,8 @@ The curve indicates the true (discretized) trajectory, the circles represent the
 
 ```{r}
 #dynamical parameters for linear motion
-theta[[2]]<-list(A=diag(4),B=c(100,5,0,0),Sigma=Sigma)
-lambda<-lambda0
-z<-c(rep(1,100),rep(2,100))
+#theta[[2]]<-list(A=diag(4),B=c(200,20,0,0),Sigma=Sigma)
+z<-c(rep(1,50),rep(2,50))
 xy<-gen_lds(z,x0,theta,lambda)
 x<-xy[["x"]]
 y<-xy[["y"]]
@@ -108,7 +105,7 @@ ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey
 In the above plot, the dark line is the true path, the points are the noisy observations, and the gray lines are samples from the posterior. We see that the posterior sampler does a good job capturing the dynamics of the projectile.
 
 ```{r}
-x_0<-c(-5,-5,250,250)
+x_0<-c(-5,-5,50,50)
 # save data for use elsewhere
 #save(theta,x_true,z,x_0,file="will_dat.RData")
 ```
@@ -124,8 +121,15 @@ K<-2 #number of dynamical modes
 D<-4 #dimension of latent state
 ydim<-ncol(y)
 nIter<-nrow(y)
-xhat_latent<-matrix(rcauchy(nIter*(D-ncol(y))),nrow=nIter)
-xhat<-cbind(y,xhat_latent) #initialize sampled x
+#use lowess to get a first estimate of latent x values
+xhat_y<-y
+lowess_resid_var<-list()
+for(j in 1:ydim){
+  xhat_y[,j]<-lowess(1:nIter,y[,j],f=.5)[["y"]]
+  lowess_resid_var[[j]]<-mse(y[,j],xhat_y[,j])
+}
+xhat_latent<-matrix(rnorm(nIter*(D-ncol(y))),nrow=nIter)
+xhat<-cbind(xhat_y,xhat_latent) #initialize sampled x
 #split data into chunks based on z and initialize dynamical params "theta"
 theta_hat<-list()
 lambda_hat<-lambda
@@ -146,37 +150,35 @@ for(k in 1:K){
 }
 avg_Sigma<-list_mean(theta_hat,function(x){x[["Sigma"]]})
 lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim]
-
+lambda_hat[["R"]]<-lambda[["R"]] #temporarily pretend this is known
+#set hyperparameters
+Delta0<-.75*diag(rep(lowess_resid_var,2))
+hp<-list(nu0=D+4,kappa0=.01,K_A=.01*diag(D),Delta0=Delta0)
 #now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
+for(j in 1:1000){
+  #lambda[["C"]] regarded as known
+  xhat<-rLDS(1,y,z,theta_hat,lambda_hat)[[1]]
+  if(j%%100==0){
+    xhat_plt<-rLDS_melt(list(xhat),colnames(x))
+    #visualize sample trajectory
+    show(ggbase+geom_path(data=xhat_plt,colour="grey",aes(group="id")))
+  }
+  
+  #run linear regression sampler on each chunk to update dynamic params
+  for(k in 1:K){
+    z_index<-which(z==k)
+    psi<-xhat[z_index,]
+    if(1 %in% z_index){
+      z_index<-z_index[z_index!=1] #omit 1
+      psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
+    } else {
+      psibar<-xhat[z_index-1,]
+    }
+    theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nSample=1)
+  }
+}
 
-#set hyperparameters for prior, these are adaptively updated later by empirical bayes
-# nu0=D+2
-# var_est<-mean(diag(cov(y)))
-# Delta0=.75*var_est*diag(D) #rough estimate
-# kappa0=.01
-# M_A<-matrix(0,nrow=D,ncol=D)
-# M_B<-rep(0,D)
-# K_A<-diag(rep(.1,D))
-
-#initialize dynamical parameters with samples from prior
-# for(k in 1:K){
-#   theta[[k]][["Sigma"]]<-Sigma<-riwish(nu0,Delta0)
-#   theta[[k]][["A"]]<-rmatnorm(1,M_A,Sigma,K_A,foxpar=TRUE)[[1]]
-#   theta[[k]][["B"]]<-mvrnorm(1,M_B,Sigma/kappa0)
-# }
-
-#lambda[["C"]] regarded as known
-xhat<-rLDS(1,y,z,theta_hat,lambda_hat)
-xhat_plt<-rLDS_melt(xhat,colnames(x))
-#visualize sample trajectory
-ggbase+geom_path(data=xhat_plt,colour="grey",aes(group="id"))
-
-#run linear regression sampler on each chunk
-#bayes_mlinreg_post(Y,X)
-#run kalman smoother/sampler
-
-# munge res into ggplot compatible format
-xhat<-
+#lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim] #need so sample from posterior
 ```
 
 ### Harmonic Motion with Known Dynamical Parameters
