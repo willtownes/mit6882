@@ -113,7 +113,7 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
 ### Linear Dynamical System Functions
 # test code/ examples are in LDS.Rmd
 gen_lds<-function(z,x0,theta,lambda){
-  # create simulated data for linear 
+  # create simulated data for linear dynamical system
   # z is sequence of hidden mode indicators (integers)
   # x1 is initial position (a vector)
   # Given dynamical parameters eg theta[[1]]=list(A,B,Sigma)
@@ -230,7 +230,6 @@ rLDS<-function(n,y,z,theta,lambda){
   # n is number of desired samples
   # each sample is a matrix
   # returns a list of length n
-  # special case n=1, returns a single matrix
   # dim(matrix) is nrow=number of steps in time series, ncol=dim(latent state)
   C<-lambda[["C"]]
   R<-lambda[["R"]]
