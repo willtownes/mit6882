@@ -43,7 +43,9 @@ log_lik_func <- log_lik_gauss_slds
 theta_init <- dat$Theta 
 lambda_init <- 
   list(R = diag(ncol(y)), 
-       C = cbind(diag(ncol(y)), matrix(0, nrow = ncol(y), ncol = ncol(x) - ncol(y))) )
+       C = cbind(diag(ncol(y)), 
+                 matrix(0, nrow = ncol(y), 
+                        ncol = ncol(x_init) - ncol(y))) )
 
 theta_sampler <- sample_theta
 lambda_sampler <- sample_lambda
@@ -54,7 +56,7 @@ z_obs <-
     y, K = 2,
     # emission measure & parameters
     log_lik_func = log_lik_func, 
-    sample_emiss = FALSE, 
+    sample_emiss = TRUE, 
     theta_init = theta_init, theta_sampler = theta_sampler, 
     lambda_init = lambda_init, lambda_sampler = lambda_sampler,
     x_init = x_init, x_sampler = x_sampler,

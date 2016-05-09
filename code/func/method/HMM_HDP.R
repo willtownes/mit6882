@@ -100,15 +100,18 @@ HMM_HDP <-
       
       #### 2.1 x: pseudo obs for SLDS ====
       # TODO
-      x_new <-
-        x_sampler(
-          y, log_lik_func, 
-          z = z_cur, m = m_cur, x = x_cur,
-          p0 = p0_cur, pk = pk_cur,          
-          theta = theta_cur, lambda = lambda_cur,
-          hyper = hyper_cur
-        )
-      
+      if (sample_emiss){
+        x_new <-
+          x_sampler(
+            y, log_lik_func, 
+            z = z_cur, m = m_cur, x = x_cur,
+            p0 = p0_cur, pk = pk_cur,          
+            theta = theta_cur, lambda = lambda_cur,
+            hyper = hyper_cur
+          )
+      } else {
+        x_new <- x_cur
+      }
       #### 2.1 z: state assignment per obs ====
       z_new <-
         sample_hmm_z(
