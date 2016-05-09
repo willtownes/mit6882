@@ -9,8 +9,6 @@ output: html_document
 library(mvtnorm)
 library(ggplot2)
 library(car) #for plotting ellipses
-#library(plyr)
-#library(MCMCpack)
 ```
 
 First we generate some fake data from a mixture model of three two-dimensional Gaussians. In the first simulation, we assume isotropic, known variance for all clusters.

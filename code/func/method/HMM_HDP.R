@@ -5,7 +5,7 @@ HMM_HDP <-
     y, K = 2,
     # emission measure & parameters
     log_lik_func = NULL, 
-    sample_emiss = FALSE, 
+    sample_emiss = TRUE, 
     theta_init = NULL, theta_sampler = NULL, 
     lambda_init = NULL, lambda_sampler = NULL,
     x_init = NULL, x_sampler = NULL,
@@ -34,12 +34,10 @@ HMM_HDP <-
     
     if (is.null(x_init)|is.null(theta_init)|is.null(lambda_init)) 
       stop("initial values for x/theta/lambda must be supplied")
-    if (is.null(theta_sampler)|is.null(lambda_sampler)) 
-      stop("emission samplers for theta/lambda must be supplied")
     if (length(theta_init) != K)
       stop("'theta_sampler' should be a list of length K")
     if (sample_emiss){
-      if (is.null(theta_sampler)|is.null(lambda_sampler))
+      if (is.null(theta_sampler)||is.null(lambda_sampler)||is.null(x_sampler))
         stop("sample_emiss = TRUE but lambda/theta sampler not supplied")
     }
     
@@ -102,15 +100,18 @@ HMM_HDP <-
       
       #### 2.1 x: pseudo obs for SLDS ====
       # TODO
-      x_new <-
-        x_sampler(
-          y, log_lik_func, 
-          z = z_cur, m = m_cur, x = x_cur,
-          p0 = p0_cur, pk = pk_cur,          
-          theta = theta_cur, lambda = lambda_cur,
-          hyper = hyper_cur
-        )
-      
+      if (sample_emiss){
+        x_new <-
+          x_sampler(
+            y, log_lik_func, 
+            z = z_cur, m = m_cur, x = x_cur,
+            p0 = p0_cur, pk = pk_cur,          
+            theta = theta_cur, lambda = lambda_cur,
+            hyper = hyper_cur
+          )
+      } else {
+        x_new <- x_cur
+      }
       #### 2.1 z: state assignment per obs ====
       z_new <-
         sample_hmm_z(
