@@ -7,7 +7,8 @@ output: html_document
 
 ```{r}
 library(ggplot2)
-source("util.R") #all LDS functions defined here
+source("../code/func/sampler/lds/lds_util.R")
+source("util.R")
 ```
 
 ### Linear and Projectile Motion
