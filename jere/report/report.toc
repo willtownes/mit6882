@@ -1,13 +1,21 @@
-\contentsline {section}{\numberline {1}Introduction}{1}{section.1}
-\contentsline {section}{\numberline {2}Hierarchical Dirichlet Process}{1}{section.2}
+\contentsline {section}{\numberline {1}Problem Formulation}{1}{section.1}
+\contentsline {section}{\numberline {2}Methods}{1}{section.2}
+\contentsline {subsection}{\numberline {2.1}HDP in Hidden Markov Model}{1}{subsection.2.1}
+\contentsline {section}{\numberline {3}Results}{1}{section.3}
+\contentsline {subsection}{\numberline {3.1}HDP-HMM}{1}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}SLDS}{1}{subsection.3.2}
+\contentsline {subsection}{\numberline {3.3}HDP-SLDS}{1}{subsection.3.3}
+\contentsline {section}{\numberline {4}Conclusion and Future Direction}{1}{section.4}
+\contentsline {subsection}{\numberline {4.1}Sampling Hyperparameters}{1}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Automatic Relevance Determination}{1}{subsection.4.2}
 \contentsline {section}{\numberline {A}Hierarchical Dirichlet Process}{1}{appendix.A}
 \contentsline {subsection}{\numberline {A.1}Model}{1}{subsection.A.1}
-\contentsline {subsection}{\numberline {A.2}Inference}{1}{subsection.A.2}
-\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{2}{subsection.A.3}
-\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{3}{appendix.B}
-\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{3}{subsection.B.1}
-\contentsline {subsection}{\numberline {B.2}Sticky HDP}{3}{subsection.B.2}
-\contentsline {subsection}{\numberline {B.3}Inference }{3}{subsection.B.3}
-\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{4}{subsubsection.B.3.1}
-\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{5}{appendix.C}
-\contentsline {section}{\numberline {D}References}{6}{appendix.D}
+\contentsline {subsection}{\numberline {A.2}Inference}{2}{subsection.A.2}
+\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{3}{subsection.A.3}
+\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{4}{appendix.B}
+\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{4}{subsection.B.1}
+\contentsline {subsection}{\numberline {B.2}Sticky HDP}{4}{subsection.B.2}
+\contentsline {subsection}{\numberline {B.3}Inference }{4}{subsection.B.3}
+\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{5}{subsubsection.B.3.1}
+\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{6}{appendix.C}
+\contentsline {section}{\numberline {D}References}{7}{appendix.D}

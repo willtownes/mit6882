@@ -80,7 +80,7 @@
  % The optional argument of \title is used in the header
  % If you want to force a line break within the title use \titlebreak instead of \\
  % but use sparingly
-\title{{\tt GURLS\_mkl}: A PFBS-based Implementation for Multiple Kernel Learning}
+\title{Bayesian Nonparametric Estimation of Switching Linear Dynamic System}
 
  % Two authors with the same address
 \author{
@@ -145,9 +145,77 @@ Boston, MA 02115 \\
 %\end{keywords}
 
 
-\section{Introduction}
+\section{Problem Formulation}
 
-\section{Hierarchical Dirichlet Process}
+In this report we consider the estimation of switching linear dynamics system (SLDS)
+
+
+\section{Methods}
+
+\begin{figure}[!h]
+      \centering
+\begin{tikzpicture}[scale = 0.5]
+        \node[det] (gamma) {$\gamma$} ; %
+        \node[det, below = 0.5cm of gamma] (alpha) {$\alpha$}; 
+        \node[det, below = 0.2cm of alpha] (kappa) {$\kappa$};       
+        \node[det, below = 0.2cm of kappa] (lambda) {$\lambda$};       
+        \node[latent, right = of gamma] (beta) {$\beta$} ; %                
+        \node[latent, right = of alpha] (pi_j) {$\pi_j$} ; 
+        \node[latent, right = of lambda] (theta_k) {$\theta_k$} ; 
+        \node[latent, below right = 0.7cm of pi_j] (z_1) {$z_1$} ; %     
+        \node[latent, right = of z_1] (z_t) {$z_t$} ; %                  
+        \node[latent, right = of z_t] (z_T) {$z_T$} ; %                            
+        \node[latent, below right = 0.7cm of theta_k] (x_1) {$x_1$} ; %     
+        \node[latent, right = of x_1] (x_t) {$x_t$} ; %         
+        \node[latent, right = of x_t] (x_T) {$x_T$} ; %                                  
+        \node[obs, below = 0.5cm of x_1] (y_1) {$y_1$} ; %     
+        \node[obs, right = of y_1] (y_t) {$y_t$} ; %         
+        \node[obs, right = of y_t] (y_T) {$y_T$} ; %                                          
+        %
+        \plate{plate_pi} {(pi_j)} {$\infty$}; %
+        \plate{plate_theta} {(theta_k)} {$\infty$}; %        
+		%        
+        \edge {gamma} {beta} ; %       
+        \edge {beta} {pi_j} ; %               
+        \edge {alpha} {pi_j} ; %                       
+        \edge {kappa} {pi_j} ; %                       
+        \edge {lambda} {theta_k} ; %                               
+        \edge {pi_j} {z_1} ; %                               
+        \edge {pi_j} {z_t} ; % 
+        \edge {pi_j} {z_T} ; %         
+        \edge {z_1} {z_t} ; %                               
+        \edge {z_t} {z_T} ; %                                       
+        \edge {theta_k} {x_1} ; %                               
+        \edge {theta_k} {x_t} ; % 
+        \edge {theta_k} {x_T} ; %         
+        \edge {z_1} {x_1} ; % 
+        \edge {z_t} {x_t} ; %         
+        \edge {z_T} {x_T} ; %          
+        \edge {x_1} {y_1} ; % 
+        \edge {x_t} {y_t} ; %         
+        \edge {x_T} {y_T} ; %                   
+\end{tikzpicture}            
+\caption{Hidden Markov Model}
+\end{figure}
+
+\subsection{HDP in Hidden Markov Model}
+
+
+
+\section{Results}
+
+\subsection{HDP-HMM}
+
+\subsection{SLDS}
+
+\subsection{HDP-SLDS}
+
+
+\section{Conclusion and Future Direction}
+
+\subsection{Sampling Hyperparameters}
+
+\subsection{Automatic Relevance Determination}
 
 
 \appendix
