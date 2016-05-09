@@ -6,7 +6,8 @@ output: html_document
 ---
 
 ```{r message=FALSE}
-source("util.R") #where the workhorse functions are stored
+source("../code/func/sampler/lds/lds_util.R") #where the workhorse functions are stored
+source("util.R")
 ```
 
 ### Cholesky Factors and Multivariate Normal Sampling

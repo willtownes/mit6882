@@ -8,7 +8,7 @@ output: pdf_document
 ```{r}
 library(expm)
 library(ggplot2)
-source("util.R") #all HMM functions defined here
+source("hmm_util.R") #all HMM functions defined here
 ```
 
 Let $z_t$ denote the hidden mode sequence. Each $z_t$ is a categorical random variable pointing to one of the L possible modes. Conditional on $z_t$, we observe the continuous variable $x_t$. The first model we examine sets L=2 with the hidden states "Big" ("B") and "Small" ("S"). We set the transition probabilities as follows:
