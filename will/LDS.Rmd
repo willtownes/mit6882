@@ -115,7 +115,7 @@ In the above plot, the dark line is the true path, the points are the noisy obse
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
 ```{r}
-init_mniw_hyper<-function(y,D=ncol(y),hyper=list()){
+hyper_init<-function(y,D=ncol(y),hyper=list()){
   #given a matrix of observations "y" (each row is an observation vector) nrow=number of time points
   #specify the desired dimension of the latent state x
   #returns a list of hyperparameters for the matrix normal inverse wishart prior over dynamical parameters
@@ -164,10 +164,30 @@ init_mniw_hyper<-function(y,D=ncol(y),hyper=list()){
   }
   return(hyper)
 }
-hyper<-init_mniw_hyper(y,D=4,hyper=list())
+hyper<-hyper_init(y,D=4,hyper=list())
 ```
 
-
+```{r}
+# sample a set of parameters theta from the prior defined by the passed-in hyperparameters
+theta_init<-function(hp){
+  # hp is a list of hyperparameters (see init_mniw_hyper)
+  # this is a sample from the prior for initialization, use bayes_mlinreg_post to sample from full conditional
+  Sigma<-riwish(hp$S0_df,hp$S0)
+  B<-mvrnorm(1,hp$M_B,Sigma/hp$kappa0)
+  A<-rmatnorm(1,hp$M_A,Sigma,hp$K_A,foxpar=TRUE)
+  return(list(Sigma=Sigma,A=A,B=B))
+}
+lambda_init<-function(hp){
+  # C matrix regarded as fixed and known
+  # R matrix random but constant across all dynamical modes
+  R<-riwish(hp$R0_df,hp$R0)
+  ydim<-ncol(R)
+  D<-ncol(hp$S0)
+  C<-matrix(0,nrow=ydim,ncol=D)
+  C[1:ydim,1:ydim]<-diag(ydim)
+  return(list(R=R,C=C))
+}
+```
 
 ```{r}
 ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
