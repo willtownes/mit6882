@@ -20,6 +20,9 @@ vignettes/*.pdf
 .Rproj.user
 
 # Hide LaTeX build files
+*.nav
+*.snm
+*.toc
 *.aux
 *.fdb_latexmk
 *.fls

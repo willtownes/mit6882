@@ -157,7 +157,7 @@ backward_kalman_msgs<-function(y, z, pars, C, R){
   # C and R are (time-invariant) parameters for observation model
   Tmax<-nrow(y)
   #D<-ncol(y)
-  eye<-diag(ncol(y))
+  eye<-diag(ncol(C))
   #note if u=chol(R) then R=u'u, NOT uu'.
   #R^{-1} = u^{-1}u^{-T}
   #implementing Algorithm 19 from Emily Fox MIT dissertation
@@ -196,14 +196,15 @@ backward_kalman_msgs<-function(y, z, pars, C, R){
   return(res)
 }
 
-fwd_kalman_sample<-function(z,pars,Lambda_00,Lambda_tt,theta_00,theta_tt,xs=NULL){
+fwd_kalman_sample<-function(z,pars,Lambda_00,Lambda_tt,theta_00,theta_tt,xs=NULL,x0_return=FALSE){
   # z,pars are as described in backward_kalman_msgs
-  # remaining parameters are form output of backward_kalman_msgs:
+  # remaining parameters are from output of backward_kalman_msgs:
   # Lambda_tt is list of all the information matrix messages from backward Kalman Filter
   # Lambda_00 is initial information matrix
   # theta_00 is initial offset parameter vector
   # theta_tt is matrix where row t is offset parameter for step t in the time series
   # can save time by pre-allocating result matrix xs
+  # if x0_return==TRUE, returns the sample of the "0^th" state in row 1, otherwise only rows 1:T
   Tmax<-length(z)
   if(is.null(xs)){
     D<-ncol(pars[[1]][["Sigma"]])
@@ -223,14 +224,16 @@ fwd_kalman_sample<-function(z,pars,Lambda_00,Lambda_tt,theta_00,theta_tt,xs=NULL
     }
     xs[t,]<-rmvnorm_info(1,offset,info_mat)
   }
+  if(x0_return==TRUE) xs<-rbind(t(xs0),xs)
   return(xs)
 }
-rLDS<-function(n,y,z,theta,lambda){
+rLDS<-function(n,y,z,theta,lambda,x0_return=FALSE){
   # convenience wrapper for combining backward_kalman_msgs with fwd_kalman_sample
   # n is number of desired samples
   # each sample is a matrix
   # returns a list of length n
   # dim(matrix) is nrow=number of steps in time series, ncol=dim(latent state)
+  # if x0_return==TRUE, returns the sample of the "0^th" state in row 1, otherwise only rows 1:T
   C<-lambda[["C"]]
   R<-lambda[["R"]]
   msg_b<-backward_kalman_msgs(y,z,theta,C,R)
@@ -238,7 +241,7 @@ rLDS<-function(n,y,z,theta,lambda){
   th_tt<-msg_b[["offset_msgs"]] #Tmax by dimension of latent state
   L_00<-msg_b[["info_matrix_init"]]
   th_00<-msg_b[["offset_msg_init"]]
-  res<-replicate(n,fwd_kalman_sample(z,theta,L_00,L_tt,th_00,th_tt),simplify=FALSE)
+  res<-replicate(n,fwd_kalman_sample(z,theta,L_00,L_tt,th_00,th_tt,x0_return=x0_return),simplify=FALSE)
   return(res)
 }
 rLDS_melt<-function(LDS_samples,cnames=NULL){
