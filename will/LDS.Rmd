@@ -131,11 +131,30 @@ theta_hat<-replicate(K,theta_init(hp),simplify=FALSE)
 lambda_hat<-lambda_init(hp)
 lambda_hat[["R"]]<-R[1:D,1:D]
 
+# sample_lds_transition_params<-function(y,z,x,
+# #run linear regression sampler on each chunk to update dynamic params
+# for(k in 1:K){
+#   z_index<-which(z==k)
+#   if(length(z)==nrow(xhat)){ #case that x_0 not first row
+#     psi<-xhat[z_index,]
+#     if(1 %in% z_index){
+#       z_index<-z_index[z_index!=1] #omit 1
+#       psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
+#     } else {
+#       psibar<-xhat[z_index-1,] #previous latent observations
+#     }
+#   } else { #case that x_0 included
+#     psi<-xhat[z_index+1,] #since x_0 is first row
+#     psibar<-xhat[z_index,]
+#   }
+#   theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nSample=1)
+# }
+
 #now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
 for(j in 1:500){
   #lambda[["C"]] regarded as known
   xhat<-rLDS(1,y,z,theta_hat,lambda_hat,x0_return=FALSE)[[1]]
-  if(j%%25==0){
+  if(j%%50==0){
     #print(paste("x0=",xhat[1,]))
     xhat_plt<-rLDS_melt(list(xhat),colnames(x)[1:D])
     #visualize sample trajectory
@@ -157,7 +176,7 @@ for(j in 1:500){
       psi<-xhat[z_index+1,] #since x_0 is first row
       psibar<-xhat[z_index,]
     }
-    theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nSample=1)
+    theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nBurn=10,nSample=1)
   }
 }
 ```

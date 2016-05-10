@@ -49,12 +49,12 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
   #X= (d by n) input matrix
   #model: Y=AX+B+E with E~MN(0,Sigma,I)
   #hyper is a list of hyperparameters. Elements:
-  #nu0,Delta0=hyperparameters of Sigma~Inv.Wishart()
+  #S0_df,S0=hyperparameters of Sigma~Inv.Wishart()
   #M_A,K_A=hyperparameters of transition matrix A~MatNorm()
   #M_B,kappa0=hyperparameters of additive matrix B~Norm()
   #Any hyperparameters not provided will be set to following defaults "empirical bayes":
-  #nu0=nrow(Y)+2 (most diffuse value while still proper)
-  #Delta0=0.75*empirical covariance of Y rows
+  #S0_df=nrow(Y)+2 (most diffuse value while still proper)
+  #S0=0.75*empirical covariance of Y rows
   #kappa0=0 uninformative
   #M_A= (d by d) zero matrix 
   #M_B= zero vector of length d
@@ -68,15 +68,15 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
   M_B<-hyper[["M_B"]]
   K_A<-hyper[["K_A"]]
   kappa0<-hyper[["kappa0"]]
-  nu0<-hyper[["nu0"]]
-  Delta0<-hyper[["Delta0"]]
+  S0_df<-hyper[["S0_df"]]
+  S0<-hyper[["S0"]]
   #set defaults if not specified
   if(is.null(M_A)) M_A<-matrix(0,nrow=d,ncol=d)
   if(is.null(M_B)) M_B<-rep(0,d)
   if(is.null(K_A)) K_A<-matrix(0,nrow=d,ncol=d)
   if(is.null(kappa0)) kappa0<-.01
-  if(is.null(nu0)) nu0<-d+2
-  if(is.null(Delta0)) Delta0<-.75*cov(t(Y))
+  if(is.null(S0_df)) S0_df<-d+2
+  if(is.null(S0)) S0<-.75*cov(t(Y))
   #sufficient statistics
   Ymn<-rowMeans(Y)
   Xmn<-rowMeans(X)
@@ -84,7 +84,7 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
   YXt<-Y%*%t(X)
   MaKa<-M_A%*%K_A
   kappan<-n+kappa0
-  nun<-nu0+n
+  nun<-S0_df+n
   wt_b<-n/kappan
   J<-rep(1,n)
   #initialize data containers
@@ -93,14 +93,14 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
   res<-replicate(nSample,list(),simplify=FALSE)
   A<-M_A
   B<-rowMeans(Y)
-  Sigma<-Delta0 #/(nu0-d-1)
+  Sigma<-S0 #/(S0_df-d-1)
   for(t in (1-nBurn):nSample){
     mu_b<-wt_b*(Ymn-A%*%Xmn)+(1-wt_b)*M_B
     B<-mvrnorm(1,mu_b,Sigma/kappan)
     Sayx<-YXt-B%*%t(n*Xmn)+MaKa
     A<-rmatnorm(1,t(solve(Saxx,t(Sayx))),Sigma,Saxx,foxpar=TRUE)[[1]]
     resids<-Y-A%*%X-B%o%J
-    Sigma<-riwish(nun,Delta0+resids%*%t(resids))
+    Sigma<-riwish(nun,S0+resids%*%t(resids))
     if(t>0){
       res[[t]][["A"]]<-A
       res[[t]][["B"]]<-B
@@ -297,7 +297,7 @@ hyper_init<-function(y,D=ncol(y),hyper=list()){
   #case where either R0 or S0 not specified, estimate from covariance of data:
   Tmax<-nrow(y)
   time<-1:Tmax
-  lowess_f<-20/Tmax #fraction of data points used to estimate x from y, essentially 5 nearest neighbors
+  lowess_f<-10/Tmax #fraction of data points used to estimate x from y, essentially 20 nearest neighbors
   lws_func<-function(u,f){
     # infer latent x column for one of y's columns
     #print(str(u))
@@ -306,7 +306,7 @@ hyper_init<-function(y,D=ncol(y),hyper=list()){
   xhat<-apply(y,2,function(u){lws_func(u,lowess_f)})
   if(is.null(hyper[["R0"]])) hyper[["R0"]]<-cov(y-xhat) #*(R0_df-ydim-1)
   #R0<-hyper[["R0"]]
-  xtrend<-apply(xhat,2,function(u){lws_func(u,40/Tmax)})
+  xtrend<-apply(xhat,2,function(u){lws_func(u,20/Tmax)})
   if(is.null(hyper[["S0"]])){
     S0<-matrix(0,nrow=D,ncol=D)
     S0_topleft<-cov(xhat-xtrend)
