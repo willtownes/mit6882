@@ -8,8 +8,8 @@ output: html_document
 ```{r}
 library(ggplot2)
 library(pander)
-source("code/func/sampler/lds/lds_util.R")
-source("will/util.R")
+source("../code/func/sampler/lds/lds_util.R")
+source("util.R")
 ```
 
 ### Linear and Projectile Motion
@@ -101,7 +101,7 @@ xs<-rLDS_melt(xs,colnames(x))
 #points(y[,1],y[,2],col="green")
 x_true<-as.data.frame(x)
 y_obs<-as.data.frame(y)
-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
+ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Trajectory Sampling with Known Dynamical Parameters")
 ```
 
 In the above plot, the dark line is the true path, the points are the noisy observations, and the gray lines are samples from the posterior. We see that the posterior sampler does a good job capturing the dynamics of the projectile.
@@ -123,7 +123,7 @@ D<-4 #latent dimension
 #initialize from default settings based on the data.
 #hp<-hyper_init(y,D=D) 
 #alternatively, adjust priors by hand to force stable dynamics
-hp<-list(kappa0=1,S0_df=8,R0_df=6,K_A=1*diag(D))
+hp<-list(kappa0=10,S0_df=10,R0_df=10,K_A=1*diag(D))
 hp<-hyper_init(y,D=D,hp)
 #hp$S0<-diag(diag(hp$S0)) #force diagonal
 #hp$R0<-diag(diag(hp$R0))
@@ -136,7 +136,7 @@ xhat<-res[["x"]]
 theta_hat<-res[["theta"]]
 xhat_plt<-rLDS_melt(xhat,colnames(x)[1:D])
 #visualize sample trajectory
-ggplot(data=xhat_plt,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching LDS with Unknown Dynamical Parameters")
+ggplot(data=xhat_plt,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Trajectory Sampling with Unknown Dynamical Parameters")
 ```
 
 After experimenting with different hyperparameter values, we found that a strong prior is essential for stable inference. Otherwise, the dynamic matrices tend to diverge to extreme values. This is likely due to the non-stationarity of the sample path. Below we examine the mean square error comparing the posterior means of the dynamical parameters with the true values:
@@ -157,55 +157,3 @@ for(zval in 1:2){
 mse_table[,c("MSE_true","MSE_prior")]<-signif(mse_table[,c("MSE_true","MSE_prior")],3)
 pander(mse_table)
 ```
-
-### Harmonic Motion with Known Dynamical Parameters
-
-Both the linear and parabolic trajectories have trends. A stationary linear dynamical system is exemplified by harmonic motion (spring motion). To facilitate visualization, we assume a constant rate of horizontal movement with stationary vertical movement defined by the following differential equation:
-$$u''(t) = -k \left(u(t)-L\right)$$
-Where $k$ is a constant related to material properties of the spring and $L$ is the equilibrium position. This is a one dimensional, second order system for position, and can be represented as a two-dimensional system of first order differential equations.
-Converting to the discretized state space model, let $x_t$ be defined as before. We have
-$x_t\sim\mathcal{N}(A x_{t-1}+B,\Sigma)$
-where
-$$A=\begin{pmatrix}1&0&0&0\\0&1&0&\Delta t\\0&0&1&0\\0& -k\Delta t & 0 & 1\end{pmatrix}$$
-The constant horizontal motion is achieved by setting $B=(r\Delta t,0,0,k L \Delta t )'$ where $r$ is the fixed horizontal velocity. We now simulate two different harmonic motion patterns, with different values of $k$,$L$, and $r$. We expect that $k$ affects the amplitude while $r$ affects the frequency of the motion. 
-
-```{r eval=FALSE}
-k<-.01; L<-100; r<-100
-z<-rep(3,1000)
-A<-diag(4)
-A[2,4]<- 1
-A[4,2]<- -k
-theta[[3]]<-list(A=A,B=c(r,0,0,k*L),Sigma=3*diag(4))
-xy<-gen_lds(z,c(0,L-200,0,0),theta,lambda)
-x<-xy[["x"]]
-y<-xy[["y"]]
-x_full<-rbind(x_full,x)
-y_full<-rbind(y_full,y)
-z_full<-c(z_full,z)
-plot(x[,1],x[,2],type="l",main="Noisy, Undamped Harmonic Motion",xlab="Horizontal Position",ylab="Vertical Position")
-points(y[,1],y[,2])
-```
-
-This kind of "blowing up" behavior is an artifact of the discretization of the differential equation. It can be improved by using damped harmonic motion:
-$$u''(t) = -k u(t) - \delta u'(t)$$
-The $\delta$ parameter causes the acceleration to tend toward zero. In terms of the linear dynamical system representation, this corresponds with replacing the one on the diagonal with $1-\delta$ in the fourth position (the vertical velocity position).
-
-```{r eval=FALSE}
-k<-.01; L<-100; r<-100; delta<-2
-z<-rep(3,1000)
-A<-diag(4)
-A[2,4]<- 1
-A[4,2]<- -k
-A[4,4]<- 1-delta
-theta[[3]]<-list(A=A,B=c(r,0,0,k*L),Sigma=3*diag(4))
-xy<-gen_lds(z,c(0,L-200,0,0),theta,lambda)
-x<-xy[["x"]]
-y<-xy[["y"]]
-x_full<-rbind(x_full,x)
-y_full<-rbind(y_full,y)
-z_full<-c(z_full,z)
-plot(x[,1],x[,2],type="l",main="Noisy, Damped Harmonic Motion",xlab="Horizontal Position",ylab="Vertical Position")
-points(y[,1],y[,2])
-```
-
-### Harmonic Motion with Unknown Dynamical Parameters

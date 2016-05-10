@@ -1,0 +1,102 @@
+---
+title: "LDS_Harmonic.Rmd"
+author: "Will Townes"
+date: "May 10, 2016"
+output: html_document
+---
+
+This notebook picks up where "LDS.Rmd" leaves off.
+
+```{r}
+library(ggplot2)
+library(pander)
+source("../code/func/sampler/lds/lds_util.R")
+source("util.R")
+```
+
+
+### Harmonic Motion with Known Dynamical Parameters
+
+Both the linear and parabolic trajectories have trends. A stationary linear dynamical system is exemplified by harmonic motion (spring motion). To facilitate visualization, we assume a one dimensional system taking positions $q_t=q(t)$ defined by the following differential equation:
+$$q''(t) = -k \left(q(t)-L\right)$$
+Where $k$ is a constant related to material properties of the spring and $L$ is the equilibrium position. This is a one dimensional, second order system for position, and can be represented as a two-dimensional system of first order differential equations.
+Converting to the discretized state space model, let $x_t=(q_t,v_t)$ be defined as before. We have
+$x_t\sim\mathcal{N}(A x_{t-1}+B,\Sigma)$
+where
+$$A=\begin{pmatrix}1&\Delta t\\ -k\Delta t & 1\end{pmatrix}$$
+To account for acceleration, $B=(0,k L \Delta t )'$ . We now simulate various patterns of harmonic motion to illustrate the effect of the parameters.
+
+```{r}
+k<-.1; L<-100
+Tmax<-100
+z<-rep(1,Tmax)
+A<-diag(2)
+A[1,2]<- 1
+A[2,1]<- -k
+theta<-list(list(A=A,B=c(0,k*L),Sigma=5*diag(2)))
+lambda<-list(C=matrix(c(1,0),nrow=1),R=matrix(100000,nrow=1,ncol=1))
+xy<-gen_lds(z,c(L-200,0),theta,lambda)
+x<-xy[["x"]]
+y<-xy[["y"]]
+time<-1:Tmax
+plot(time,x[,1],type="l",main="Noisy, Undamped Harmonic Motion",xlab="Time",ylab="Position")
+points(time,y[,1])
+```
+
+This kind of "blowing up" behavior is an artifact of the discretization of the differential equation. It can be improved by using damped harmonic motion:
+$$u''(t) = -k u(t) - \delta u'(t)$$
+The $\delta$ parameter causes the acceleration to tend toward zero. In terms of the linear dynamical system representation, this corresponds with replacing the one on the diagonal with $1-\delta$ in the fourth position (the vertical velocity position).
+
+```{r eval=FALSE}
+make_harmonic_matrices<-function(k,L,delta,Sigma_var=2){
+  # return the A, B, Sigma matrices for harmonic motion
+  A<-matrix(c(1,-k,1,1-delta),nrow=2)
+  #A[1,2]<- 1
+  #A[2,1]<- -k
+  #A[2,2]<-1-delta
+  return(list(A=A,B=c(0,k*L),Sigma=Sigma_var*diag(2)))
+}
+#k<-.01; L<-0; delta<-.1
+Tmax<-500
+z<-rep(1,Tmax)
+theta<-list(make_harmonic_matrices(.01,0,.1))
+lambda<-list(C=matrix(c(1,0),nrow=1),R=matrix(10,nrow=1,ncol=1))
+xy<-gen_lds(z,c(L+10,0),theta,lambda)
+x<-xy[["x"]]
+y<-xy[["y"]]
+time<-1:Tmax
+plot(time,x[,1],type="l",main="Noisy, Damped Harmonic Motion",xlab="Time",ylab="Position")
+points(time,y[,1])
+```
+
+### Switching Harmonic Motion
+
+We now consider a scenario where there are three kinds of harmonic motion, the first one with $k=.01, L=0, \delta=.1$, the second with $k=.01, L=100, \delta=.2$, and the third with $k=.1, L=0, \delta=.1$.
+
+```{r}
+Tmax<-100
+z<-rep(c(1,2,3),each=Tmax)
+#modes<-factor(c(1,z))
+Sigma_var<-1
+theta[[1]]<-make_harmonic_matrices(.01,30,.5,Sigma_var)
+theta[[2]]<-make_harmonic_matrices(.01,-10,.5,Sigma_var)
+theta[[3]]<-make_harmonic_matrices(.1,5,.2,Sigma_var)
+xy<-gen_lds(z,c(0,0),theta,lambda)
+x<-xy[["x"]]
+y<-xy[["y"]]
+Tmax<-Tmax*3
+time<-1:Tmax
+plot(time,x[,1],type="l",main="Noisy, Damped Harmonic Motion",xlab="Time",ylab="Position")
+points(time,y[,1])
+colnames(x)<-c("position","velocity")
+colnames(y)<-c("position")
+xs<-rLDS(100,y,z,theta,lambda,x0_return=TRUE) #100 samples from the joint posterior
+xs<-lapply(xs,function(x){cbind(x,c(0,time))})
+xs<-rLDS_melt(xs,c(colnames(x),"time"))
+x_true<-as.data.frame(x)
+#x_true$time<-time
+y_obs<-as.data.frame(y)
+ggplot(data=xs,aes(x=time,y=position))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,size=0.8,aes(colour=factor(z)))+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Time")+ylab("Position")+ggtitle("Harmonic Motion with Known Dynamical Parameters")#+scale_fill_hue(c=85,l=85)
+```
+
+### Harmonic Motion with Unknown Dynamical Parameters
