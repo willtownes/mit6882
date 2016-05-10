@@ -152,7 +152,7 @@ Boston, MA 02115 \\
 %\subsection{Problem Formulation}
 \section{Problem Formulation}
 
-We consider the estimation of switching linear dynamical systems (SLDS) and attempt to replicate results from \cite{fox_bayesian_2009}. SLDS is a state-space model in which at time t, an agent's observed state $y_t \in \real^{d_y}$ is an noisy and censored version of the underlying state $x_t \in \real^{d_x}$, whose movement is governed by an time-varying linear dynamic system. The underlying state trajectory is subject to its own noise as well. Namely:
+Dynamical systems consist of objects changing over time. These systems are often modeled deterministically using differential equations. Given noisy observations from such a system (a time series), one may wish to recover underlying latent dynamics. Every high order ordinary linear differential equation (ODE) can be represented as a system of first order linear ODEs. The popular linear dynamical system (LDS) model is a probabilistic analog to discretized systems of first order linear ODEs. We consider the estimation of switching linear dynamical systems (SLDS), which allow changes between multiple LDS regimes, and attempt to replicate results from \cite{fox_bayesian_2009}. SLDS is a state-space model in which at time t, an agent's observed state $y_t \in \real^{d_y}$ is a noisy and censored version of the underlying state $x_t \in \real^{d_x}$, whose movement is governed by an time-varying linear dynamic system. The underlying state trajectory is subject to its own noise as well. Namely:
 \begin{align} \label{eq:lds1}
 x_t|x_{t-1}&\sim\mathcal{N}(A_t x_{t-1} + B_t,\Sigma_t) \\
 y_t|x_t&\sim\mathcal{N}(C x_t,R)
@@ -188,7 +188,7 @@ However, the flexible nature of SLDS caused also considerable  difficulty in est
         %
         \plate{plate_pi} {(pi_j)} {$\infty$}; %
         \plate{plate_theta} {(theta_k)} {$\infty$}; %
-		%
+        %
         \edge {gamma} {beta} ; %
         \edge {beta} {pi_j} ; %
         \edge {alpha} {pi_j} ; %
@@ -215,38 +215,73 @@ However, the flexible nature of SLDS caused also considerable  difficulty in est
 \label{fig:SLDS}
 \end{figure}
 
-In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under the Bayesian framework by choosing appropriate priors. We outline a Gibbs Sampling procedure for inference. Finally, we show results for each compartment of the overall model, as well as preliminary results for an integrated model.
+In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under the Bayesian framework by choosing appropriate priors. We outline a Gibbs Sampling procedure for joint inference on $\bTheta$ and $\bPi$. Finally, we show results for each compartment of the overall model, as well as preliminary results for an integrated model.
 
 \section{Methods}
 
-As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$ and an HMM with a hierarchical Dirichlet process prior (HDP-HMM) for countably infinite $\bPi$. We specify conditionally conjugate priors over the unknown dynamical parameters $\Theta$ and provide a Gibbs sampler for inference. We implemented the methods in R, code is available at \url{https://github.com/willtownes/mit6882}.
+As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$. Due to our goal of sampling dynamic parameters $\btheta$ on a state-space model, we have to battle several technical difficulties such as (1) choosing proper prior for $\btheta$, (2) identify efficient algorithm for computing $p(\bz|\by, \bTheta, \bPi)$ on Markov time series, and (3) explicit sampling for infinite dimensional $\pi_j$. These problems are not encountered in classical HDP \citep{teh_hierarchical_2006} due to the lack of time-series dependency between observations, and the fact that $\btheta$ are not of interest in classical HDP and therefore $\btheta$, $\pi_j$ can be integrated out in their Gibbs sampler. In this section, we discuss how we have overcame the three aforementioned difficulties and constructed our Gibbs sampler for efficient and regularized joint inference of $\bTheta$ and $\bPi$. We implemented the methods in R, code is available at \url{https://github.com/willtownes/mit6882}.
 
-\subsection{Prior for Dynamical Parameters $\btheta$}
+\subsection{Sampling Dynamical Parameters $\btheta$ using Matrix Normal Prior}
 
 First note that while $\vert\Theta\vert$ may be infinite in the probability model, for a finite dataset, at any given Gibbs iteration only a finite number $K$ of modes are instantiated. Hence, conditional on $z_{1:T}$, we can assume $\Zsc=\{1\ldots K\}$. $z_t$ acts as a selector for the dynamical parameters used at time $t$. Hence, the $k^{th}$ \textit{unique} set of dynamical parameters $\theta^{(k)} = (A^{(k)},B^{(k)},\Sigma^{(k)})$ appears in the likelihood only for indices $\{t,t-1: z_t=k\}$. We collect all the column vectors $x_{t:z_t=k}$ into the matrix $\Psi^{(k)}$ and similarly form $\bar{\Psi}^{(k)}$ from $x_{\{(t-1):z_t=k\}}$. Then model \eqref{eq:lds1} implies that
 \[\Psi^{(k)}\sim\mathcal{MN}(A^{(k)}\bar{\Psi}^{(k)}+B^{(k)}\mathbf{1}',\Sigma^{(k)},\mathbb{I})\]
 
 This is a multivariate version of linear regression, where $\mathcal{MN}$ denotes the \textit{matrix normal} distribution\footnote{Let $Z$ be a matrix with iid entries $z_{ij}\sim\mathcal{N}(0,1)$ and $X=M+AXB$, then $X\sim\mathcal{MN}(M,U,V)$. $M$ is the mean matrix, $U=AA'$ is the row covariance parameter and $V=B'B$ is the column covariance parameter. See Appendix \ref{sec:ap_matnorm} for more details.}. The (conditionally) conjugate priors are given by $A^{(k)}\sim\mathcal{MN}(M_A,\Sigma^{(k)},K_A^{-1})$, $B^{(k)}\sim\mathcal{N}(M_B,\Sigma^{(k)}/\kappa_0)$, and $\Sigma^{(k)}\sim\mathcal{IW}(\nu_0,\Delta_0)$. These\footnote{$\mathcal{IW}$=Inverse Wishart} lead to closed form full conditionals, see Appendix \ref{sec:ap_matnorm} for derivations. Hyperparameters can be set to regularize estimates toward stable dynamics.
 
-\subsection{Block Sampling for Hidden Variables $\bx$ and $\bz$}
+\subsection{Sampling for Hidden Variables ($\bx$, $\bz$) using Message Passing}
 
 Conditional on other unknowns, sampling the hidden states $x_{1:T}$ can be performed simultaneously rather than sequentially. This leads to faster mixing by reducing the dimensionality of the parameter space. The full conditional distribution can be obtained in closed form by running a Kalman smoother, which uses forward and backward message passing over the sequential observations. However, since we only want to sample from this distribution, we can equivalently pass messages in one direction and recursively sample in the other direction. This saves computation time since message passing requires marginalizing over each $x_t$, which involves inverting $d_x\times d_x$ matrices. We refer to this procedure as a ``Kalman Sampler''. Full derivations are provided in Appendix \ref{sec:ap_kalman}.
 
-Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$
+Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$.
 
+\subsection{Sampling Transition Probabilities $\bPi$, $\bbeta$ using HDP Prior}
+Finally, we perform estimation of $\pi_k$, the rows of the transition matrix $\bPi$. We notice that the high-dimensional nature of $\bPi$ ($dim(\bPi) = O(|\Zsc|^2)$) calls for regularization  not only on the individual values of $\pi_{kj}$'s, but more importantly, also on the global dimension of $\bPi$ (equivalently, the cardinality of $\Zsc$) such that the states corresponding to the same dynamics are gathered into the same cluster, which is crucial for stable estimation of $\bTheta_k$'s.
 
-\subsection{Block Sampling Hidden Category $\bz$}
+Operationally, we regularize individual $\pi_{jk}$'s using a global base measure $\bbeta$ by assuming $\pi_k$'s are conditionally exchangeable given a HDP prior, and we further regularize the dimension of $\bPi$ using an degree K weak limit approximation to the Dirichlet process:
+\begin{align*}
+Dirichlet(\frac{\alpha}{K}, \dots, \frac{\alpha}{K}) \rightarrow GEM(\alpha)
+\end{align*}
+and effectively upperbounding the number of possible clusters by K.
 
-\subsection{Sampling Transition Probabilities $\bPi$ and $\beta$}
+Furthermore, the excessive flexibility of HDP makes it easy to overfit data and produce hidden states estimates $\{z_t\}_{t=1}^T$ implying unrealistically fast state switching (e.g. a fight jet switching between offensive diving and defensive spiral every other millisecond). We tackle this issue by augmenting the self-transition probability for all state $k \in \Zsc$ by a non-negative value $\kappa$, i.e. using the sticky HDP prior:
+\begin{align*}
+\pi_{kj} &\stackrel{iid}{\sim}
+DP(\alpha + \kappa, \frac{\alpha\bbeta + \kappa \delta_k(j)}{\alpha + \kappa}) + \kappa \delta_k(j) \qquad \mbox{or equivalently}\\
+E(\pi_{kj}) &=
+\left\{\begin{matrix*}[l]
+\beta_j \qquad &&  j \neq k
+\\
+\beta_k + \kappa \qquad &&  j = k
+\end{matrix*}\right.
+\end{align*}
 
+\begin{algorithm}[H]
+\caption{MKL PFBS algorithm}
+\label{alg:MKL}
+\begin{algorithmic}[1]
+\Procedure{{\tt rls\_dual\_mkl\_pfbs}}{$\bK$, $\by$, $(\tau, \mu, \sigma)$}
+\State $\balpha^0=\bzero$
 
+\For{$p=1$ to ${\tt MAX\_ITER}$}
+\State
+$\balpha_0^{p} = (1-\frac{\mu}{\sigma})\balpha^{p-1} - \frac{1}{\sigma n}(\bK\balpha^{p-1} - \by) $
+\State
+$\balpha^p =
+  \bS_{\frac{\tau}{\sigma}}(K, \balpha_0^{p})$
+\EndFor
+\State \Return $f^{\tt MAX\_ITER} = (\balpha^{\tt MAX\_ITER})^T\bk$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\newpage
 \section{Results}
 
 \subsection{HDP-HMM}
 
 \subsection{SLDS}
 
-In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
+In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Details of converting from differential equations to LDS parameters are given in Appendix \ref{sec:ode2lds}. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
 
 \begin{enumerate}
 \item Two dimensional, two mode SLDS with projectile motion followed by linear motion
@@ -273,7 +308,46 @@ As shown in the figures, we found that in many cases the posterior over trajecto
 
 We found that the choice of hyperparameters was crucial to stable sampling. Specifically, using weak priors caused samplers to diverge or run into numerical problems, particularly in the case of nonstationary dynamics and/or high dimensional latent states (scenario 1). To remedy this, we used a heuristic of first estimating the latent trajectory roughly by computing local regressions (LOESS) over each observed dimension versus time, then setting the hyperprior scale matrix for $\Sigma$ based on the empirical covariance of the observations versus the LOESS prediction at that point. If $y_t\in\mathbb{R}^n$ and $x_t\in\mathbb{R}^d$, this procedure accounts for the first $n$ dimensions of $x_t$. The remaining $d-n$ elements of the scale matrix were set to a diagonal with determinant equal to the first $n$ block. This is a generalization of the procedure given by \cite{fox_bayesian_2009}, which can be considered a special case where the LOESS bandwidth is set very wide. We were able to get away with weaker priors for the stationary dynamical system (scenario 2).
 
-We also compared our estimates for the dynamical parameters to their true values using mean squared error. Interestingly, in most cases the MSE between the posterior means (empirically computed from samples) and the priors was less than MSE between posterior means and true values. This reinforces the fact that the prior held a great influence over the results in these models.
+We also compared our estimates for the dynamical parameters to their true values using mean squared error as shown in tables \ref{tbl:scen1} and \ref{tbl:scen2}. Interestingly, in most cases the MSE between the posterior means (empirically computed from samples) and the priors was less than MSE between posterior means and true values. This reinforces the fact that the prior held a great influence over the results in these models, especially under the nonstationary scenario 1. Furthermore, it is clear that estimation of mean parameters $A$ and $B$ was more successful than covariance parameters $\Sigma$.
+
+% latex table generated in R 3.2.5 by xtable 1.8-2 package
+% Tue May 10 18:14:21 2016
+\begin{table}[]
+\centering
+\caption{Posterior Mean Accuracy for Scenario 1: Projectile/Linear Motion}
+\label{tbl:scen1}
+\begin{tabular}{rlrr}
+\hline
+mode & param & MSE (vs truth) & MSE (vs prior)\\ \hline
+1 & A     & 0.06      & 0.06       \\
+1 & B     & 2.31      & 1.56       \\
+1 & $\Sigma$ & 9.69      & 9.18       \\
+2 & A     & 0.12      & 0.12       \\
+2 & B     & 0.93      & 0.04       \\
+2 & $\Sigma$ & 9.55      & 0.01       \\ \hline
+\end{tabular}
+\end{table}
+
+% latex table generated in R 3.2.5 by xtable 1.8-2 package
+% Tue May 10 18:29:13 2016
+\begin{table}[]
+\centering
+\caption{Posterior Mean Accuracy for Scenario 2: Harmonic Motion}
+\label{tbl:scen2}
+\begin{tabular}{rlrr}
+\hline
+mode & param & MSE (vs truth) & MSE (vs prior) \\ \hline
+1    & A     & 1.13      & 0.31       \\
+1    & B     & 0.16      & 0.12       \\
+1    & $\Sigma$ & 1.26      & 1.20       \\
+2    & A     & 0.12      & 0.72       \\
+2    & B     & 0.05      & 0.02       \\
+2    & $\Sigma$ & 0.10      & 2.08       \\
+3    & A     & 18.00     & 14.00      \\
+3    & B     & 3.53      & 3.24       \\
+3    & $\Sigma$ & 0.16      & 2.54       \\ \hline
+\end{tabular}
+\end{table}
 
 \subsection{HDP-SLDS}
 
@@ -281,10 +355,13 @@ We also compared our estimates for the dynamical parameters to their true values
 
 Based on our results that hyperparameter settings are crucial to numerical stability of SLDS inference, we suspect that using less general models such as autoregressive structures, or employing sparsity promoting priors such as automatic relevance determination (ARD) could have advantages over the conjugate prior we employed. Indeed \cite{fox_bayesian_2009} considered such alternative priors and found many benefits. This makes sense intuitively, in that the matrix normal/ inverse wishart prior induces a larger parameter space which is only partially alleviated by strongly regularizing hyperparameters. Furthermore, conjugacy of a prior, while mathematically convenient, does not imply appropriateness to the model at hand. Finally, we note that in modeling dynamical systems, it is not unrealistic to assume strong prior information may be available, for example if the trajectory is a physical system like we considered. Future studies should consider how to design priors that reflect this kind of information in the model.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Start of Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Start of Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \clearpage
 \appendix
+\addcontentsline{toc}{chapter}{\\ \textbf{Appendix}}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
+
 \section{Hierarchical Dirichlet Process}
 
 \subsection{Model}
@@ -366,7 +443,7 @@ x_{ji} | z_{ji}, (\theta_{k})_{k=1}^\infty && \sim F(\theta_{z_{ji}})
 
 
 \subsection{Inference}
-Assuming conjugacy between $H$ and $F$ \footnote{so we can integrate out the mixture component parameters} and holding $(\gamma, \alpha_0)$ fixed,
+Assuming conjugacy between $H$ and $F$ and holding $(\gamma, \alpha_0)$ fixed,
 
 we now describe a simplied Gibbs approach to sample parameters $(z_{ji}, m_{jk}, \bpi_0)$ from the Chinese Restaurant Franchise (see Appendix \ref{sec:CRF}) representation of the posterior, where the parameter $z_{ji}$ are refered to respectively as customer-specific dish assignment, $m_{jk}$ as  dish-specific table count, and $\pi_0$ as global dish distribution. This particular method is  referred to as "direct assignment" in \cite{teh_hierarchical_2006} since it circumvented the issue of bookkeeping for every $t_{ij}$ (customer-specific table assignment) and $k_{jt}$ (table-specific dish assignment) variables.
 
@@ -447,7 +524,7 @@ N( \frac{n_{k}^{-(ji)}\sigma_0^2}{ n_{k}^{-(ji)}\sigma_0^2 + \sigma^2}
         %
         \plate{plate_pi} {(pi_j)} {$\infty$}; %
         \plate{plate_theta} {(theta_k)} {$\infty$}; %
-		%
+        %
         \edge {gamma} {beta} ; %
         \edge {beta} {pi_j} ; %
         \edge {alpha} {pi_j} ; %
@@ -617,6 +694,49 @@ Integrating over $G_0$, the sampling scheme for table-specific dish $\psi_{jt} \
 \sum_{k=1}^K \frac{m_{.k}}{\gamma + m_{..}} \delta_{\theta_{k}} +
 \frac{\gamma}{m_{..} + \gamma} H
 \end{align*}
+
+\section{Converting Differential Equations into Linear Dynamical Systems} \label{sec:ode2lds}
+\subsubsection{Linear and Projectile
+Motion}
+
+The linear dynamical system model is given by the following recursive
+equations: \[x_t|x_{t-1}\sim\mathcal{N}(A_t x_{t-1},\Sigma_t)\]
+\[y_t|x_t\sim\mathcal{N}(C_t x_t,R_t)\]
+
+In Fox et al, they set \(C_t=C\) and \(R_t=R\) to be constant across
+time and without loss of generality force \(C=[I_d,0]\) where \(d\) is
+the dimensionality of \(y_t\). Hence the key parameters that switch are
+\(A_t,\Sigma_t\) and the key parameter that is constant for all time is
+\(R\).
+
+For the purposes of visualization, we produce data from a projectile
+trajectory. We follow the discussion in Section 1.3.2 in \emph{Bayesian
+Time Series Models} by Barber et al. According to a discretization of
+Newton's Laws of motion, acceleration is constant. Let \(q(t)\) be the
+two-vector of position, \(v(t)\) be the velocity vector, and
+\(a=(0,-9.8)\) be the acceleration. If a projectile is launched from the
+origin \(q_0=(0,0)\) with initial velocity \(v_0=(10,10)\) (ie the
+initial angle is \(\theta=\pi/4\), we expect it to follow a parabolic
+path to a maximum height of
+\[y_{max} = \frac{\Vert v_0 \Vert^2\sin^2(\theta)}{2\Vert a\Vert}\]
+
+A discretized version of the trajectory is:
+\[q(t+k) = q(t) + k v(t) + \frac{k^2}{2} a\] \[v(t+k) = v(t) + k a(t) \]
+Where \(k\) is the time gap between observations (assumed to be constant
+for simplicity). Let \(x(t) = (q(t),v(t))\) (a 4-vector). We can write
+\(x(t) = A x(t-1) + B\) where
+\[A = \begin{pmatrix} I & kI\\0 & I\end{pmatrix}\]
+\[B = \begin{pmatrix} \frac{1}{2}k^2 Ia\\ kIa\end{pmatrix}\] Hence
+\[(x_t|x_{t-1})\sim\mathcal{N}\left(Ax_{t-1}+B,\Sigma\right)\] with
+\(\Sigma\) representing random perturbations in motion due to the wind.
+We set \(\Sigma\) to a a diagonal matrix with diagonal elements
+\((\sigma^2_1,\sigma^2_1,\sigma^2_2,\sigma^2_2)\). This indicates the
+noise in the velocity part is different than the position part, but the
+noise is the same in any spatial direction. This is a linear dynamical
+system. Assume we observe only a noisy version of the position,
+\(y(t)\). Hence, the observation model is
+\[(y_t|x_t)\sim\mathcal{N}\left(Cx_t,R\right)\] Where \(C = (I,0)\) (a
+2x4 matrix) and \(R\) is measurement noise.
 
 \section{Block Sampling for Linear Dynamical System} \label{sec:ap_kalman}
 \subsection{Forward Kalman Filter}
