@@ -4,9 +4,9 @@ Report Structure
 Introduction
 ------------
 
--	[x ] Motivation - Types of data to apply to  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Jeremiah)**
--	[x ] Overall Graphic Model, & Notation &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Jeremiah)**
--	[x ] Brief Technical Overview &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Will)**
+-	[x] Motivation - Types of data to apply to  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Jeremiah)**
+-	[x] Overall Graphic Model, & Notation &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Jeremiah)**
+-	[x] Brief Technical Overview &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; **(Will)**
 
 Methods
 -------
