@@ -175,6 +175,7 @@ backward_kalman_msgs<-function(y, z, pars, C, R){
     A<-par_t[["A"]]
     B<-par_t[["B"]]
     Sigma<-par_t[["Sigma"]]
+    #print(str(Sigma))
     Si<-solve(Sigma)
     Jt<-t(solve(Lambda+Si,Lambda))
     Lt<-eye - Jt
@@ -345,4 +346,66 @@ x0_init<-function(x,time=1:10){
   # time is the index vector of observations used to extrapolate to time zero
   x<-x[time,]
   coef(lm(x~time))[1,]
+}
+
+### Functions for Sampling Unknown Dynamical Parameters in LDS
+
+sample_theta_inner<-function(y,z,xhat,k,hyper,x_0=NULL,nBurn=10){
+  #run linear regression sampler on data for mode "k" to update dynamic params
+  #y is observed states
+  #xhat is a sample of the latent state path
+  #Normally first row of xhat is x_0 so that nrow(xhat)=length(z)+1
+  #if not, must provide x_0
+  #hyper= list of hyperparameters for the dynamical parameter priors
+  #nBurn=number of times to run multivariate linear regression Gibbs sampler before outputting the sample
+  z_index<-which(z==k)
+  if(length(z)==nrow(xhat)){ #case that x_0 not first row
+    psi<-xhat[z_index,]
+    if(1 %in% z_index){
+      z_index<-z_index[z_index!=1] #omit 1
+      psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
+    } else {
+      psibar<-xhat[z_index-1,] #previous latent observations
+    }
+  } else { #case that x_0 included
+    psi<-xhat[z_index+1,] #since x_0 is first row
+    psibar<-xhat[z_index,]
+  }
+  bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nBurn=nBurn,nSample=1)[[1]]
+}
+
+# sample_theta<-function(y,z,xhat,hyper,x_0=NULL,nBurn=10){
+#   #sample all dynamic parameters
+#   K<-length(unique(z))
+#   lapply(1:K,function(k){sample_theta_inner(y,z,xhat,k,hyper,x_0,nBurn)})
+# }
+
+sample_lds_posterior<-function(y,z,theta,lambda,hyper,nBurn=10,nSample=100,nBurn_theta=10){
+  # y= observed data
+  # z=hidden mode indicator vector
+  # theta = initialized transition params for latent state x
+  # lambda = emission params for p(y|x)
+  # nBurn = burn in period
+  # nSample= number of samples from posterior to return
+  # hyper = list of hyperparameters for priors of theta and lambda
+  # nBurn_theta = how many times to run multivariate linreg Gibbs before drawing sample
+  #fn<-function(k,xt){sample_theta_inner(y,z,xt,k,hyper,nBurn=nBurn_theta)}
+  res_x<-list()
+  res_theta<-list()
+  for(t in (1-nBurn):nSample){
+    #run Kalman Smoother/Sampler to infer latent states x
+    xhat<-rLDS(1,y,z,theta,lambda,x0_return=TRUE)[[1]]
+    #run linear regression sampler on each chunk to update dynamic params
+    #theta<-lapply(1:K,function(k){fn(k,xhat)})
+    for(k in 1:K){
+      theta[[k]]<-sample_theta_inner(y,z,xhat,k,hyper,nBurn=nBurn_theta)
+    }
+    if(t>0){
+      res_x[[t]]<-xhat
+      res_theta[[t]]<-theta
+      # lambda[["C"]] regarded as known
+      #TODO- sampling from lambda[["R"]]
+    }
+  }
+  return(list(x=res_x,theta=res_theta)) #lambda=res_lambda...
 }

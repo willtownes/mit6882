@@ -7,6 +7,7 @@ output: html_document
 
 ```{r}
 library(ggplot2)
+library(pander)
 source("code/func/sampler/lds/lds_util.R")
 source("will/util.R")
 ```
@@ -115,15 +116,14 @@ In the above plot, the dark line is the true path, the points are the noisy obse
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
 ```{r}
-ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
 theta_true<-theta
 K<-2 #number of dynamical modes
 D<-4 #latent dimension
-x_0<-x0_init(x)[1:D] #cheating here and using the real values, must be a better way?
+#x_0<-x0_init(x)[1:D] #cheating here and using the real values, must be a better way?
 #initialize from default settings based on the data.
 #hp<-hyper_init(y,D=D) 
 #alternatively, adjust priors by hand to force stable dynamics
-hp<-list(kappa0=10,S0_df=10,R0_df=10,K_A=10*diag(D))
+hp<-list(kappa0=1,S0_df=8,R0_df=6,K_A=1*diag(D))
 hp<-hyper_init(y,D=D,hp)
 #hp$S0<-diag(diag(hp$S0)) #force diagonal
 #hp$R0<-diag(diag(hp$R0))
@@ -131,57 +131,32 @@ theta_hat<-replicate(K,theta_init(hp),simplify=FALSE)
 lambda_hat<-lambda_init(hp)
 lambda_hat[["R"]]<-R #cheat and use the true value for R
 
-# sample_lds_transition_params<-function(y,z,x,
-# #run linear regression sampler on each chunk to update dynamic params
-# for(k in 1:K){
-#   z_index<-which(z==k)
-#   if(length(z)==nrow(xhat)){ #case that x_0 not first row
-#     psi<-xhat[z_index,]
-#     if(1 %in% z_index){
-#       z_index<-z_index[z_index!=1] #omit 1
-#       psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
-#     } else {
-#       psibar<-xhat[z_index-1,] #previous latent observations
-#     }
-#   } else { #case that x_0 included
-#     psi<-xhat[z_index+1,] #since x_0 is first row
-#     psibar<-xhat[z_index,]
-#   }
-#   theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nSample=1)
-# }
-
-#now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
-for(j in 1:500){
-  #lambda[["C"]] regarded as known
-  xhat<-rLDS(1,y,z,theta_hat,lambda_hat,x0_return=FALSE)[[1]]
-  if(j%%50==0){
-    #print(paste("x0=",xhat[1,]))
-    xhat_plt<-rLDS_melt(list(xhat),colnames(x)[1:D])
-    #visualize sample trajectory
-    show(ggbase+geom_path(data=xhat_plt,linetype=2,aes(group="id")))
-  }
-  
-  #run linear regression sampler on each chunk to update dynamic params
-  for(k in 1:K){
-    z_index<-which(z==k)
-    if(length(z)==nrow(xhat)){ #case that x_0 not first row
-      psi<-xhat[z_index,]
-      if(1 %in% z_index){
-        z_index<-z_index[z_index!=1] #omit 1
-        psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
-      } else {
-        psibar<-xhat[z_index-1,] #previous latent observations
-      }
-    } else { #case that x_0 included
-      psi<-xhat[z_index+1,] #since x_0 is first row
-      psibar<-xhat[z_index,]
-    }
-    theta_hat[k]<-bayes_mlinreg_post(t(psi),t(psibar),hyper=hp,nBurn=10,nSample=1)
-  }
-}
+res<-sample_lds_posterior(y,z,theta_hat,lambda_hat,hp)
+xhat<-res[["x"]]
+theta_hat<-res[["theta"]]
+xhat_plt<-rLDS_melt(xhat,colnames(x)[1:D])
+#visualize sample trajectory
+ggplot(data=xhat_plt,aes(x=pos_horiz,y=pos_vert))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,aes(colour=factor(z)),size=1.2)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching LDS with Unknown Dynamical Parameters")
 ```
 
-After experimenting with different hyperparameter values, we found that a strong prior is essential for stable inference. Otherwise, the dynamic matrices tend to diverge to extreme values. This is likely due to the non-stationarity of the sample path.
+After experimenting with different hyperparameter values, we found that a strong prior is essential for stable inference. Otherwise, the dynamic matrices tend to diverge to extreme values. This is likely due to the non-stationarity of the sample path. Below we examine the mean square error comparing the posterior means of the dynamical parameters with the true values:
+
+```{r}
+prior_mean<-list()
+prior_mean<-list(A=hp$M_A,B=hp$M_B,Sigma=hp$S0/(hp$S0_df-D-1))
+mse_table<-data.frame(mode=rep(c(1,2),each=3),param=rep(c("A","B","Sigma"),2),MSE_true=NA,MSE_prior=NA)
+for(zval in 1:2){
+  for(parval in c("A","B","Sigma")){
+    par_post_mean<-list_mean(theta_hat,function(x){x[[zval]][[parval]]})
+    truval<-theta_true[[zval]][[parval]]
+    mseval<-mse(par_post_mean,truval)
+    mseprior<-mse(par_post_mean,prior_mean[[parval]])
+    mse_table[mse_table$mode==zval & mse_table$param==parval, c("MSE_true", "MSE_prior")] <- c(mseval,mseprior)
+  }
+}
+mse_table[,c("MSE_true","MSE_prior")]<-signif(mse_table[,c("MSE_true","MSE_prior")],3)
+pander(mse_table)
+```
 
 ### Harmonic Motion with Known Dynamical Parameters
 
