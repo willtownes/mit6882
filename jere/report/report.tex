@@ -147,11 +147,22 @@ Boston, MA 02115 \\
 
 \section{Problem Formulation}
 
-In this report we consider the estimation of switching linear dynamics system (SLDS)
+We consider the estimation of switching linear dynamics system (SLDS). SLDS is an state-space model in which at time t, an agent's observed state $y_t \in \real^{d_y}$ is an noisy and censored version of the underlying state $x_t \in \real^{d_x}$, whose movement is governed by an time-varying linear dynamic system. Namely:
+\begin{align*}
+x_t &= A_t x_{t-1} + B_t \\
+y_t &= C x_t + \epsilon_t
+\end{align*}
+where $C_{d_y, d_x} = [\bI_{d_y} \; \bzero_{d_x - d_y} ]$ is a fixed "censoring matrix" that selects the first $d_y$ elements of $x_t$, and $\epsilon_t \stackrel{iid}{\sim} N(0, \bR)$ is the noise of observation. Further, SLDS assumes the set of time-specific dynamics $\theta_t = \{A_t, B_t\}$ arise from a countable set $\bTheta = \Asc \times \Bsc$ indexed by $\Zsc$, and define $z_t \in \Zsc$ the index of $\theta_t$. Finally, SLDS assumes $z_t$ follows an Markov process with transition matrix $\bPi_{|\Theta| \times |\Theta|} = [\pi_1, \dots, \pi_z, \dots]^T$, such that:
+\begin{align*}
+z_t | z_{t-1} \sim \pi_{z_{t-1}}
+\end{align*}
+
+Despite the Markovian assumption, SLDS is capable of modeling a diverse collection of phenomenon with complex temporal dependencies from maneuvering aircraft trajectory to financial time-series. For example, in order to use SLDS to analyze fighter pilot's combat style, we may denote $\by_t \in \real^3$ the observed position of the maneuvering fighter aircraft, which comes  from a latent $\bx_t \in \real^9$ comprised of position, speed and momentum in the 3D space. We can learn how pilot executes different maneuvers by estimating $\bTheta$ the countability finite set contain dynamics that describe the offensive maneuvers ("barrel roll attack", "lag roll", etc) and defensive maneuvers ("break", "last-ditch", etc). We can also learn the pilots' habit of "maneuvers combo's" by estimating $\bPi_{|\Theta| \times |\Theta|}$ the transition matrix describing how pilots moves from one maneuver to the other.
+
+However, 
 
 
-\section{Methods}
-
+\newpage
 \begin{figure}[!h]
       \centering
 \begin{tikzpicture}[scale = 0.5]
@@ -195,8 +206,13 @@ In this report we consider the estimation of switching linear dynamics system (S
         \edge {x_t} {y_t} ; %         
         \edge {x_T} {y_T} ; %                   
 \end{tikzpicture}            
-\caption{Hidden Markov Model}
+\caption{Graphical Model for Switching Linear Dynamics System}
+\label{fig:SLDS}
 \end{figure}
+
+We also 
+
+\section{Methods}
 
 \subsection{HDP in Hidden Markov Model}
 
@@ -419,7 +435,7 @@ N( \frac{n_{k}^{-(ji)}\sigma_0^2}{ n_{k}^{-(ji)}\sigma_0^2 + \sigma^2}
         \edge {z_t} {y_t} ; %         
         \edge {z_T} {y_T} ; %                 
 \end{tikzpicture}            
-\caption{Hidden Markov Model}
+\caption{Hidden Markov Model}\label{fig:HMM}
 \end{figure}
 
 \begin{alignat*}{2}
