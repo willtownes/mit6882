@@ -85,8 +85,11 @@ HDP <-
       
       if (ii %% 10 == 1){
         plot(x, col = z_cur, 
-             main = paste0(ii, ", K = ", length(m_cur))
+             main = paste0(ii, ", K = ", length(m_cur)),
+             type = "n"
         )
+        text(x, labels = z_cur, col = z_cur, cex = 0.5)
+        
       }
     }
     
