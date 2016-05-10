@@ -215,31 +215,68 @@ However, the flexible nature of SLDS caused also considerable  difficulty in est
 \label{fig:SLDS}
 \end{figure}
 
-In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under the Bayesian framework by choosing appropriate priors. We outline a Gibbs Sampling procedure for inference. Finally, we show results for each compartment of the overall model, as well as preliminary results for an integrated model.
+In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under the Bayesian framework by choosing appropriate priors. We outline a Gibbs Sampling procedure for joint inference on $\bTheta$ and $\bPi$. Finally, we show results for each compartment of the overall model, as well as preliminary results for an integrated model.
 
 \section{Methods}
 
-As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$ and an HMM with a hierarchical Dirichlet process prior (HDP-HMM) for countably infinite $\bPi$. We specify conditionally conjugate priors over the unknown dynamical parameters $\Theta$ and provide a Gibbs sampler for inference.
+As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$. Due to our goal of sampling dynamic parameters $\btheta$ on a state-space model, we have to battle several technical difficulties such as (1) choosing proper prior for $\btheta$, (2) identify efficient algorithm for computing $p(\bz|\by, \bTheta, \bPi)$ on Markov time series, and (3) explicit sampling for infinite dimensional $\pi_j$. These problems are not encountered in classical HDP \citep{teh_hierarchical_2006} due to the lack of time-series dependency between observations, and the fact that $\btheta$ are not of interest in classical HDP and therefore $\btheta$, $\pi_j$ can be integrated out in their Gibbs sampler. In this section, we discuss how we have overcame the three aforementioned difficulties and constructed our Gibbs sampler for efficient and regularized joint inference of $\bTheta$ and $\bPi$.
 
-\subsection{Prior for Dynamical Parameters $\btheta$}
+\subsection{Sampling Dynamical Parameters $\btheta$ using Matrix Normal Prior}
 
 First note that while $\vert\Theta\vert$ may be infinite in the probability model, for a finite dataset, at any given Gibbs iteration only a finite number $K$ of modes are instantiated. Hence, conditional on $z_{1:T}$, we can assume $\Zsc=\{1\ldots K\}$. $z_t$ acts as a selector for the dynamical parameters used at time $t$. Hence, the $k^{th}$ \textit{unique} set of dynamical parameters $\theta^{(k)} = (A^{(k)},B^{(k)},\Sigma^{(k)})$ appears in the likelihood only for indices $\{t,t-1: z_t=k\}$. We collect all the column vectors $x_{t:z_t=k}$ into the matrix $\Psi^{(k)}$ and similarly form $\bar{\Psi}^{(k)}$ from $x_{\{(t-1):z_t=k\}}$. Then model \eqref{eq:lds1} implies that
 \[\Psi^{(k)}\sim\mathcal{MN}(A^{(k)}\bar{\Psi}^{(k)}+B^{(k)}\mathbf{1}',\Sigma^{(k)},\mathbb{I})\]
 
 This is a multivariate version of linear regression, where $\mathcal{MN}$ denotes the \textit{matrix normal} distribution\footnote{Let $Z$ be a matrix with iid entries $z_{ij}\sim\mathcal{N}(0,1)$ and $X=M+AXB$, then $X\sim\mathcal{N}(M,U,V)$. $M$ is the mean matrix, $U=AA'$ is the row covariance parameter and $V=B'B$ is the column covariance parameter. See Appendix \ref{sec:ap_matnorm} for more details.}. The (conditionally) conjugate priors are given by $A^{(k)}\sim\mathcal{MN}(M_A,\Sigma^{(k)},K_A^{-1})$, $B^{(k)}\sim\mathcal{N}(M_B,\Sigma^{(k)}/\kappa_0)$, and $\Sigma^{(k)}\sim\mathcal{IW}(\nu_0,\Delta_0)$. These\footnote{$\mathcal{IW}$=Inverse Wishart} lead to closed form full conditionals, see Appendix \ref{sec:ap_matnorm} for derivations. Hyperparameters can be set to regularize estimates toward stable dynamics.
 
-\subsection{Block Sampling for Hidden Variables $\bx$ and $\bz$}
+\subsection{Sampling for Hidden Variables ($\bx$, $\bz$) using Message Passing}
 
 Conditional on other unknowns, sampling the hidden states $x_{1:T}$ can be performed simultaneously rather than sequentially. This leads to faster mixing by reducing the dimensionality of the parameter space. The full conditional distribution can be obtained in closed form by running a Kalman smoother, which uses forward and backward message passing over the sequential observations. However, since we only want to sample from this distribution, we can equivalently pass messages in one direction and recursively sample in the other direction. This saves computation time since message passing requires marginalizing over each $x_t$, which involves inverting $d_x\times d_x$ matrices. We refer to this procedure as a ``Kalman Sampler''. Full derivations are provided in Appendix \ref{sec:ap_kalman}.
 
-Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$
+Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$. 
 
+\subsection{Sampling Transition Probabilities $\bPi$, $\bbeta$ using HDP Prior}
+Finally, we perform estimation of $\pi_k$, the rows of the transition matrix $\bPi$. We notice that the high-dimensional nature of $\bPi$ ($dim(\bPi) = O(|\Zsc|^2)$) calls for regularization  not only on the individual values of $\pi_{kj}$'s, but more importantly, also on the global dimension of $\bPi$ (equivalently, the cardinality of $\Zsc$) such that the states corresponding to the same dynamics are gathered into the same cluster, which is crucial for stable estimation of $\bTheta_k$'s.
 
-\subsection{Block Sampling Hidden Category $\bz$}
+Operationally, we regularize individual $\pi_{jk}$'s using a global base measure $\bbeta$ by assuming $\pi_k$'s are conditionally exchangeable given a HDP prior, and we further regularize the dimension of $\bPi$ using an degree K weak limit approximation to the Dirichlet process:
+\begin{align*}
+Dirichlet(\frac{\alpha}{K}, \dots, \frac{\alpha}{K}) \rightarrow GEM(\alpha)
+\end{align*}
+and effectively upperbounding the number of possible clusters by K.
 
-\subsection{Sampling Transition Probabilities $\bPi$ and $\beta$}
+Furthermore, the excessive flexibility of HDP makes it easy to overfit data and produce hidden states estimates $\{z_t\}_{t=1}^T$ implying unrealistically fast state switching (e.g. a fight jet switching between offensive diving and defensive spiral every other millisecond). We tackle this issue by augmenting the self-transition probability for all state $k \in \Zsc$ by a non-negative value $\kappa$, i.e. using the sticky HDP prior:
+\begin{align*}
+\pi_{kj} &\stackrel{iid}{\sim} 
+DP(\alpha + \kappa, \frac{\alpha\bbeta + \kappa \delta_k(j)}{\alpha + \kappa}) + \kappa \delta_k(j) \qquad \mbox{or equivalently}\\
+E(\pi_{kj}) &= 
+\left\{\begin{matrix*}[l]
+\beta_j \qquad &&  j \neq k
+\\ 
+\beta_k + \kappa \qquad &&  j = k
+\end{matrix*}\right.
+\end{align*}
 
+Integrating discussion from above three sections
 
+\begin{algorithm}[H]
+\caption{MKL PFBS algorithm}
+\label{alg:MKL}
+\begin{algorithmic}[1]
+\Procedure{{\tt rls\_dual\_mkl\_pfbs}}{$\bK$, $\by$, $(\tau, \mu, \sigma)$}
+\State $\balpha^0=\bzero$
+
+\For{$p=1$ to ${\tt MAX\_ITER}$}
+\State 
+$\balpha_0^{p} = (1-\frac{\mu}{\sigma})\balpha^{p-1} - \frac{1}{\sigma n}(\bK\balpha^{p-1} - \by) $
+\State 
+$\balpha^p = 
+  \bS_{\frac{\tau}{\sigma}}(K, \balpha_0^{p})$
+\EndFor
+\State \Return $f^{\tt MAX\_ITER} = (\balpha^{\tt MAX\_ITER})^T\bk$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\newpage
 \section{Results}
 
 \subsection{HDP-HMM}
@@ -261,6 +298,9 @@ In this section we assume known observation noise $R$ and hidden mode sequence $
 
 \clearpage
 \appendix
+\addcontentsline{toc}{chapter}{\textbf{Appendix}}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
+
 \section{Hierarchical Dirichlet Process}
 
 \subsection{Model}
@@ -342,7 +382,7 @@ x_{ji} | z_{ji}, (\theta_{k})_{k=1}^\infty && \sim F(\theta_{z_{ji}})
 
 
 \subsection{Inference}
-Assuming conjugacy between $H$ and $F$ \footnote{so we can integrate out the mixture component parameters} and holding $(\gamma, \alpha_0)$ fixed,
+Assuming conjugacy between $H$ and $F$ and holding $(\gamma, \alpha_0)$ fixed,
 
 we now describe a simplied Gibbs approach to sample parameters $(z_{ji}, m_{jk}, \bpi_0)$ from the Chinese Restaurant Franchise (see Appendix \ref{sec:CRF}) representation of the posterior, where the parameter $z_{ji}$ are refered to respectively as customer-specific dish assignment, $m_{jk}$ as  dish-specific table count, and $\pi_0$ as global dish distribution. This particular method is  referred to as "direct assignment" in \cite{teh_hierarchical_2006} since it circumvented the issue of bookkeeping for every $t_{ij}$ (customer-specific table assignment) and $k_{jt}$ (table-specific dish assignment) variables.
 

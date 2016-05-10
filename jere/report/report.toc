@@ -1,28 +1,29 @@
 \contentsline {section}{\numberline {1}Problem Formulation}{1}{section.1}
 \contentsline {section}{\numberline {2}Methods}{1}{section.2}
-\contentsline {subsection}{\numberline {2.1}Prior for Dynamical Parameters $\boldsymbol {\theta }$}{2}{subsection.2.1}
-\contentsline {subsection}{\numberline {2.2}Block Sampling for Hidden Variables ${\bf x}$ and ${\bf z}$}{2}{subsection.2.2}
-\contentsline {subsection}{\numberline {2.3}Block Sampling Hidden Category ${\bf z}$}{2}{subsection.2.3}
-\contentsline {subsection}{\numberline {2.4}Sampling Transition Probabilities $\boldsymbol {\Pi }$ and $\beta $}{2}{subsection.2.4}
-\contentsline {section}{\numberline {3}Results}{2}{section.3}
-\contentsline {subsection}{\numberline {3.1}HDP-HMM}{2}{subsection.3.1}
-\contentsline {subsection}{\numberline {3.2}SLDS}{2}{subsection.3.2}
-\contentsline {subsection}{\numberline {3.3}HDP-SLDS}{2}{subsection.3.3}
-\contentsline {section}{\numberline {4}Conclusion and Future Direction}{2}{section.4}
-\contentsline {subsection}{\numberline {4.1}Sampling Hyperparameters}{2}{subsection.4.1}
-\contentsline {subsection}{\numberline {4.2}Automatic Relevance Determination}{2}{subsection.4.2}
-\contentsline {section}{\numberline {A}Hierarchical Dirichlet Process}{3}{appendix.A}
-\contentsline {subsection}{\numberline {A.1}Model}{3}{subsection.A.1}
-\contentsline {subsection}{\numberline {A.2}Inference}{3}{subsection.A.2}
-\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{4}{subsection.A.3}
-\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{5}{appendix.B}
-\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{5}{subsection.B.1}
-\contentsline {subsection}{\numberline {B.2}Sticky HDP}{5}{subsection.B.2}
-\contentsline {subsection}{\numberline {B.3}Inference }{5}{subsection.B.3}
-\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{6}{subsubsection.B.3.1}
-\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{7}{appendix.C}
-\contentsline {section}{\numberline {D}Block Sampling for Linear Dynamical System}{7}{appendix.D}
-\contentsline {subsection}{\numberline {D.1}Forward Kalman Filter}{7}{subsection.D.1}
-\contentsline {subsection}{\numberline {D.2}Backward Kalman Filter}{9}{subsection.D.2}
-\contentsline {section}{\numberline {E}Unknown Dynamical Parameters}{10}{appendix.E}
-\contentsline {section}{\numberline {F}References}{12}{appendix.F}
+\contentsline {subsection}{\numberline {2.1}Sampling Dynamical Parameters $\boldsymbol {\theta }$ using Matrix Normal Prior}{2}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}Sampling for Hidden Variables (${\bf x}$, ${\bf z}$) using Message Passing}{2}{subsection.2.2}
+\contentsline {subsection}{\numberline {2.3}Sampling Transition Probabilities $\boldsymbol {\Pi }$, $\boldsymbol {\beta }$ using HDP Prior}{2}{subsection.2.3}
+\contentsline {section}{\numberline {3}Results}{4}{section.3}
+\contentsline {subsection}{\numberline {3.1}HDP-HMM}{4}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}SLDS}{4}{subsection.3.2}
+\contentsline {subsection}{\numberline {3.3}HDP-SLDS}{4}{subsection.3.3}
+\contentsline {section}{\numberline {4}Conclusion and Future Direction}{4}{section.4}
+\contentsline {subsection}{\numberline {4.1}Sampling Hyperparameters}{4}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Automatic Relevance Determination}{4}{subsection.4.2}
+\contentsline {chapter}{\textbf {Appendix}}{5}{subsection.4.2}
+\setcounter {tocdepth}{-1}
+\contentsline {section}{\numberline {A}Hierarchical Dirichlet Process}{5}{appendix.A}
+\contentsline {subsection}{\numberline {A.1}Model}{5}{subsection.A.1}
+\contentsline {subsection}{\numberline {A.2}Inference}{5}{subsection.A.2}
+\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{6}{subsection.A.3}
+\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{7}{appendix.B}
+\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{7}{subsection.B.1}
+\contentsline {subsection}{\numberline {B.2}Sticky HDP}{7}{subsection.B.2}
+\contentsline {subsection}{\numberline {B.3}Inference }{7}{subsection.B.3}
+\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{8}{subsubsection.B.3.1}
+\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{9}{appendix.C}
+\contentsline {section}{\numberline {D}Block Sampling for Linear Dynamical System}{9}{appendix.D}
+\contentsline {subsection}{\numberline {D.1}Forward Kalman Filter}{9}{subsection.D.1}
+\contentsline {subsection}{\numberline {D.2}Backward Kalman Filter}{11}{subsection.D.2}
+\contentsline {section}{\numberline {E}Unknown Dynamical Parameters}{12}{appendix.E}
+\contentsline {section}{\numberline {F}References}{14}{appendix.F}
