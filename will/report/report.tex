@@ -157,14 +157,14 @@ We consider the estimation of switching linear dynamical systems (SLDS) and atte
 x_t|x_{t-1}&\sim\mathcal{N}(A_t x_{t-1} + B_t,\Sigma_t) \\
 y_t|x_t&\sim\mathcal{N}(C x_t,R)
 \end{align}
-where $C_{d_y, d_x} = [\bI_{d_y} \; \bzero_{d_x - d_y} ]$ is a fixed ``censoring matrix'' that selects the first $d_y$ elements of $x_t$, $\Sigma_t$ is the transition model noise matrix, and $R$ is the observation noise matrix. Further, SLDS assumes the set of time-specific dynamics $\theta_t = \{A_t, B_t, \Sigma_t\}$ arise from a countable set $\bTheta = \Asc \times \Bsc \times \{\Sigma_t\}$ indexed by $\Zsc$, and define $z_t \in \Zsc$ the index of $\theta_t$. Finally, SLDS assumes $z_t$ follows an Markov process with transition matrix $\bPi_{|\Theta| \times |\Theta|} = [\pi_1, \dots, \pi_z, \dots]^T$, such that:
+where $C_{d_y, d_x} = [\bI_{d_y} \; \bzero_{d_x - d_y} ]$ is a fixed ``censoring matrix'' that selects the first $d_y$ elements of $x_t$, $\Sigma_t$ is the transition model noise matrix, and $R$ is the observation noise matrix. Further, SLDS assumes the set of time-specific dynamics $\theta_t = \{A_t, B_t, \Sigma_t\}$ arise from a countable set $\bTheta = \Asc \times \Bsc \times \{\Sigma_t\}$ indexed by $\Zsc$. Finally, if denote $z_t \in \Zsc$ the index of $\theta_t$, SLDS assumes $z_t$ follows an Markov process with transition matrix $\bPi_{|\Theta| \times |\Theta|} = [\pi_1, \dots, \pi_z, \dots]^T$, such that:
 \begin{align*}
 z_t | z_{t-1} \sim \pi_{z_{t-1}}
 \end{align*}
 
-Despite the Markovian assumption, SLDS is capable of modeling a diverse collection of phenomenon with complex temporal dependencies from maneuvering aircraft trajectory to financial time-series. For example, in order to use SLDS to analyze fighter pilot's combat style, we may denote $\by_t \in \real^3$ the observed position of the maneuvering fighter aircraft, which comes  from a latent $\bx_t \in \real^9$ comprised of position, speed and momentum in the 3D space. We can learn how pilot executes different maneuvers by estimating $\bTheta$ the countability finite set contain dynamics that describe the offensive maneuvers ("barrel roll attack", "lag roll", etc) and defensive maneuvers ("break", "last-ditch", etc). We can also learn the pilots' habit of "maneuvers combo's" by estimating $\bPi_{|\Theta| \times |\Theta|}$ the transition matrix describing how pilots moves from one maneuver to the other.
+Despite the Markovian assumption, SLDS is capable of modeling a diverse collection of phenomenon with complex temporal dependencies from maneuvering aircraft trajectory to financial time-series. For example, in order to use SLDS to analyze fighter pilot's combat style, we may denote $\by_t \in \real^3$ the observed position of the maneuvering fighter aircraft, which comes  from a latent $\bx_t \in \real^9$ comprised of position, speed and momentum in the 3D space. We can learn how pilot executes different maneuvers by estimating $\bTheta$ (a countably finite set) containing dynamics that describe a range of offensive and defensive maneuvers (e.g. "barrel roll attack", "lag roll", "break", "last-ditch", etc). We can also learn the pilots' habit of "maneuver combo's" by estimating $\bPi_{|\Theta| \times |\Theta|}$ the transition matrix describing how pilots moves from one maneuver to the other.
 
-However, the flexible nature of SLDS also caused difficulty in estimation, in particular the dimension of transition matrix $\bPi$ is  $O(|\bTheta|^2)$ and can theoretically grow to infinity. To this regard, Bayesian nonparametric methods, in particular Hierarchical Dirichlet Process (HDP), achieves efficient inference and sparse solution to $\bPi$ through global shrinkage on each state-specific transition distributions.
+However, the flexible nature of SLDS caused also considerable  difficulty in estimation, in particular the dimension of transition matrix $\bPi$ is  $O(|\bTheta|^2)$ and can theoretically grow to infinity. To this regard, Bayesian nonparametric methods, in particular Hierarchical Dirichlet Process (HDP), achieves efficient inference and sparse solution to $\bPi$ through global shrinkage on each state-specific transition distributions.
 
 \begin{figure}[!h]
       \centering
@@ -205,6 +205,8 @@ However, the flexible nature of SLDS also caused difficulty in estimation, in pa
         \edge {z_1} {x_1} ; %
         \edge {z_t} {x_t} ; %
         \edge {z_T} {x_T} ; %
+        \edge {x_1} {x_t} ; %
+        \edge {x_t} {x_T} ; %
         \edge {x_1} {y_1} ; %
         \edge {x_t} {y_t} ; %
         \edge {x_T} {y_T} ; %
@@ -212,27 +214,31 @@ However, the flexible nature of SLDS also caused difficulty in estimation, in pa
 \caption{Graphical Model for Switching Linear Dynamics System}
 \label{fig:SLDS}
 \end{figure}
-\newpage
 
 In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under the Bayesian framework by choosing appropriate priors. We outline a Gibbs Sampling procedure for inference. Finally, we show results for each compartment of the overall model, as well as preliminary results for an integrated model.
 
 \section{Methods}
 
-As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$ and an HMM with a hierarchical Dirichlet process prior (HDP-HMM) for countably infinite $\bPi$. We specify conditionally conjugate priors over the unknown dynamical parameters $\Theta$ and provide a Gibbs sampler for inference.
+As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$ and an HMM with a hierarchical Dirichlet process prior (HDP-HMM) for countably infinite $\bPi$. We specify conditionally conjugate priors over the unknown dynamical parameters $\Theta$ and provide a Gibbs sampler for inference. We implemented the methods in R, code is available at \url{https://github.com/willtownes/mit6882}.
 
-\subsection{Prior for Dynamical Parameters}
+\subsection{Prior for Dynamical Parameters $\btheta$}
 
 First note that while $\vert\Theta\vert$ may be infinite in the probability model, for a finite dataset, at any given Gibbs iteration only a finite number $K$ of modes are instantiated. Hence, conditional on $z_{1:T}$, we can assume $\Zsc=\{1\ldots K\}$. $z_t$ acts as a selector for the dynamical parameters used at time $t$. Hence, the $k^{th}$ \textit{unique} set of dynamical parameters $\theta^{(k)} = (A^{(k)},B^{(k)},\Sigma^{(k)})$ appears in the likelihood only for indices $\{t,t-1: z_t=k\}$. We collect all the column vectors $x_{t:z_t=k}$ into the matrix $\Psi^{(k)}$ and similarly form $\bar{\Psi}^{(k)}$ from $x_{\{(t-1):z_t=k\}}$. Then model \eqref{eq:lds1} implies that
-
 \[\Psi^{(k)}\sim\mathcal{MN}(A^{(k)}\bar{\Psi}^{(k)}+B^{(k)}\mathbf{1}',\Sigma^{(k)},\mathbb{I})\]
 
-This is a multivariate version of linear regression, where $\mathcal{MN}$ denotes the \textit{matrix normal} distribution\footnote{Let $Z$ be a matrix with iid entries $z_{ij}\sim\mathcal{N}(0,1)$ and $X=M+AXB$, then $X\sim\mathcal{N}(M,U,V)$. $M$ is the mean matrix, $U=AA'$ is the row covariance parameter and $V=B'B$ is the column covariance parameter. See Appendix \ref{sec:ap_matnorm} for more details.}. The (conditionally) conjugate priors are given by $A^{(k)}\sim\mathcal{MN}(M_A,\Sigma^{(k)},K_A^{-1})$, $B^{(k)}\sim\mathcal{N}(M_B,\Sigma^{(k)}/\kappa_0)$, and $\Sigma^{(k)}\sim\mathcal{IW}(\nu_0,\Delta_0)$. These\footnote{$\mathcal{IW}$=Inverse Wishart} lead to closed form full conditionals, see Appendix \ref{sec:ap_matnorm} for derivations. Hyperparameters can be set to regularize estimates toward stable dynamics.
+This is a multivariate version of linear regression, where $\mathcal{MN}$ denotes the \textit{matrix normal} distribution\footnote{Let $Z$ be a matrix with iid entries $z_{ij}\sim\mathcal{N}(0,1)$ and $X=M+AXB$, then $X\sim\mathcal{MN}(M,U,V)$. $M$ is the mean matrix, $U=AA'$ is the row covariance parameter and $V=B'B$ is the column covariance parameter. See Appendix \ref{sec:ap_matnorm} for more details.}. The (conditionally) conjugate priors are given by $A^{(k)}\sim\mathcal{MN}(M_A,\Sigma^{(k)},K_A^{-1})$, $B^{(k)}\sim\mathcal{N}(M_B,\Sigma^{(k)}/\kappa_0)$, and $\Sigma^{(k)}\sim\mathcal{IW}(\nu_0,\Delta_0)$. These\footnote{$\mathcal{IW}$=Inverse Wishart} lead to closed form full conditionals, see Appendix \ref{sec:ap_matnorm} for derivations. Hyperparameters can be set to regularize estimates toward stable dynamics.
 
-\subsection{Block Sampling Hidden States}
+\subsection{Block Sampling for Hidden Variables $\bx$ and $\bz$}
 
 Conditional on other unknowns, sampling the hidden states $x_{1:T}$ can be performed simultaneously rather than sequentially. This leads to faster mixing by reducing the dimensionality of the parameter space. The full conditional distribution can be obtained in closed form by running a Kalman smoother, which uses forward and backward message passing over the sequential observations. However, since we only want to sample from this distribution, we can equivalently pass messages in one direction and recursively sample in the other direction. This saves computation time since message passing requires marginalizing over each $x_t$, which involves inverting $d_x\times d_x$ matrices. We refer to this procedure as a ``Kalman Sampler''. Full derivations are provided in Appendix \ref{sec:ap_kalman}.
 
-\subsection{HDP in Hidden Markov Model}
+Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$
+
+
+\subsection{Block Sampling Hidden Category $\bz$}
+
+\subsection{Sampling Transition Probabilities $\bPi$ and $\beta$}
+
 
 \section{Results}
 
@@ -240,7 +246,23 @@ Conditional on other unknowns, sampling the hidden states $x_{1:T}$ can be perfo
 
 \subsection{SLDS}
 
-In this section we assume known observation noise $R$ and hidden mode sequence $Z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We
+In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
+\begin{enumerate}
+\item Two dimensional, two mode SLDS with projectile motion followed by linear motion\\
+\item One dimensional, three mode SLDS with three different kinds of damped harmonic motion.
+\end{enumerate}
+
+For each scenario, we first used the true dynamical parameters and mode sequence to learn the posterior over the hidden states $x_{1:T}$. Then, we tried learning both the hidden states and the dynamical parameters.
+
+\begin{figure}
+  \centering
+  \includegraphics[width = 1\linewidth]{"./plot/lds/01_projectile_known"}
+  \includegraphics[width = 1\linewidth]{"./plot/lds/02_projectile_unknown"}
+  \includegraphics[width = 1\linewidth]{"./plot/lds/03_harmonic_known"}
+  \includegraphics[width = 1\linewidth]{"./plot/lds/04_harmonic_unknown"}
+\end{figure}
+
+
 
 \subsection{HDP-SLDS}
 
@@ -252,6 +274,8 @@ In this section we assume known observation noise $R$ and hidden mode sequence $
 \subsection{Automatic Relevance Determination}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Start of Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
 \appendix
 \section{Hierarchical Dirichlet Process}
 
@@ -371,24 +395,6 @@ Bern \Big(\frac{\alpha_0 \pi_{0, k}}{n_{jk} + \alpha_0 \pi_{0, k}} \Big)
 \bpi_0 & \sim Dir(m_1, \dots, m_K, \gamma)
 \end{align*}
 \end{enumerate}
-
-\begin{algorithm}[H]
-\caption{HDP, Gibbs Sampler through Direct Assignment}
-\label{alg:MKL}
-\begin{algorithmic}[1]
-\Procedure{{\tt hdp\_gibbs\_ds}}{$\bK$, $\by$, $(\tau, \mu, \sigma)$}
-\State $\balpha^0=\bzero$
-
-\For{$p=1$ to ${\tt MAX\_ITER}$}
-\State
-$\balpha_0^{p} = (1-\frac{\mu}{\sigma})\balpha^{p-1} - \frac{1}{\sigma n}(\bK\balpha^{p-1} - \by) $
-\State
-$\balpha^p = \bS_{\frac{\tau}{\sigma}}(K, \balpha_0^{p})$
-\EndFor
-\State \Return $f^{\tt MAX\_ITER} = (\balpha^{\tt MAX\_ITER})^T\bk$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
 
 \subsection{Application: Clustering Hierarchical Gaussian Data}
 Consider mixture of Gaussian data $\bx = \{ \bx_1, \dots, \bx_K \}$ with $\bx_k \stackrel{iid}{\sim} MVN(\btheta_{k, 2 \times 1}, \bI_{2 \times 2})$ with unknown mean $\btheta$. Assuming diffused Gaussian prior $\btheta \sim N(\bzero, \sigma^2 \bI)$, the form of likelihood $F$ and base measure $H$ are:
