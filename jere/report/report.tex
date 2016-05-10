@@ -159,7 +159,7 @@ z_t | z_{t-1} \sim \pi_{z_{t-1}}
 
 Despite the Markovian assumption, SLDS is capable of modeling a diverse collection of phenomenon with complex temporal dependencies from maneuvering aircraft trajectory to financial time-series. For example, in order to use SLDS to analyze fighter pilot's combat style, we may denote $\by_t \in \real^3$ the observed position of the maneuvering fighter aircraft, which comes  from a latent $\bx_t \in \real^9$ comprised of position, speed and momentum in the 3D space. We can learn how pilot executes different maneuvers by estimating $\bTheta$ the countability finite set contain dynamics that describe the offensive maneuvers ("barrel roll attack", "lag roll", etc) and defensive maneuvers ("break", "last-ditch", etc). We can also learn the pilots' habit of "maneuvers combo's" by estimating $\bPi_{|\Theta| \times |\Theta|}$ the transition matrix describing how pilots moves from one maneuver to the other.
 
-However, 
+However, the flexible nature of SLDS also caused difficulty in estimation, in particular the dimension of transition matrix $\bPi$ is  $O(|\bTheta|^2)$ and can theoretically grow to infinity. To this regard, Bayesian nonparametric methods, in particular Hierarchical Dirichlet Process (HDP), achieves efficient inference and sparse solution to $\bPi$ through global shrinkage on each state-specific transition distributions. In the rest of this report, we discuss how to properly adapt HDP into the estimation of $\bPi$ matrix, and further how to integrate this method into the entire estimation process for the SLDS under Bayesian framework.
 
 
 \newpage
