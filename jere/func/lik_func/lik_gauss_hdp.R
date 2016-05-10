@@ -4,7 +4,7 @@ library(mvtnorm)
 #     x ~ N(u, I)
 #     u ~ N(0, sigma * I)
 
-lik_gauss_mean <- 
+lik_gauss_hdp <- 
   function(x, z, m,
            # misc data information
            n, d, K,

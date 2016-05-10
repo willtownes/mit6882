@@ -3,7 +3,7 @@ require(dplyr)
 
 source("./func/util/source_Dir.R")
 sourceDir("./func/")
-lik_func <- lik_gauss_dhp
+lik_func <- lik_gauss_hdp
 
 set.seed(400)
 dat <- 
@@ -12,9 +12,16 @@ dat <-
     J = 1, K = 10,
     n = 500, d = 2)
 
+dat <- 
+  HDP_gauss(# 3 cluster, 1 sub-cluster (per cl), 
+    gamma = 10, alpha = 0.5,
+    J = 1, K = 100,
+    n = 500, d = 2)
+
 x <- dat %>% extract2(1) %>% do.call(rbind, .)
 z <- dat[[2]] %>% as.factor %>% as.numeric
 x <- x[order(z), ]
+plot(x)
 
 HDP(
   # data, restaurant number, dish number
