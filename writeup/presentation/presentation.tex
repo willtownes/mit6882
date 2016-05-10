@@ -100,7 +100,7 @@
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[HDP-HMM-SLDS]{Hierarchical Dirichlet Process for Switching Linear Dynamical Systems} % The short title appears at the bottom of every slide, the full title is only on the title page
+\title[HDP-HMM-SLDS]{Nonparametric Bayesian Estimation of\\  Switching Linear Dynamical Systems} % The short title appears at the bottom of every slide, the full title is only on the title page
 
 \author{Will Townes, Jeremiah Zhe Liu} % Your name
 
@@ -127,8 +127,8 @@
 \frametitle{How to Estimate?}
 Fighter pilot's
 \begin{itemize}
-\item Maneuvering style
-\item Maneuvering strategy
+\item Maneuvering style: How was each maneuver executed?
+\item Maneuvering strategy: Maneuver combo's?
 \end{itemize}
 
 \begin{figure}
@@ -202,7 +202,7 @@ Dimension?
 \begin{minipage}{0.35\textwidth}
 and put a prior...
 \begin{itemize}
-\item $\pi_j \sim DP(\alpha, \beta)$
+\item $\pi_j \sim DP(\alpha, \beta) + \kappa \delta_j$
 \item But....
 \end{itemize}
 
@@ -338,8 +338,12 @@ Need to sample $(\bz, \beta, \bPi)$ and $(\bx, \bTheta)$ jointly:
 \begin{itemize}
 \item In contrast to conditional sampler in original HDP \\
  $p(z_t = k| \bz_{(-t)}, \beta) = p(z_t = k| \by)f(y_t|\by_{-(t)})$
-\item efficiently algorithm available for Markov Model\\
-(Forward-backward Message Passing)
+\item efficiently algorithm available for Markov Model:\\
+Forward-backward Message Passing, i.e.
+\begin{align*}
+\bz &\sim p(\bz | \by) 
+= p(z_t | z_{t-1}, \by)p(z_{t-1} | z_{t-2}, \by) \dots p(z_2 | z_1, \by)p(z_1 | \by)
+\end{align*}
 \end{itemize}
 \item Sample $\beta, \pi_k$ through standard CRF:
 \begin{itemize}
