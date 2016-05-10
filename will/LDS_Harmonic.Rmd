@@ -47,7 +47,7 @@ This kind of "blowing up" behavior is an artifact of the discretization of the d
 $$u''(t) = -k u(t) - \delta u'(t)$$
 The $\delta$ parameter causes the acceleration to tend toward zero. In terms of the linear dynamical system representation, this corresponds with replacing the one on the diagonal with $1-\delta$ in the fourth position (the vertical velocity position).
 
-```{r eval=FALSE}
+```{r}
 make_harmonic_matrices<-function(k,L,delta,Sigma_var=2){
   # return the A, B, Sigma matrices for harmonic motion
   A<-matrix(c(1,-k,1,1-delta),nrow=2)
@@ -100,3 +100,46 @@ ggplot(data=xs,aes(x=time,y=position))+geom_path(aes(group=id),colour="grey")+ge
 ```
 
 ### Harmonic Motion with Unknown Dynamical Parameters
+
+```{r}
+theta_true<-theta
+K<-3 #number of dynamical modes
+D<-2 #latent dimension
+#x_0<-x0_init(x)[1:D] #cheating here and using the real values, must be a better way?
+#initialize from default settings based on the data.
+hp<-hyper_init(y,D=D) 
+#alternatively, adjust priors by hand to force stable dynamics
+#hp<-list(kappa0=10,S0_df=10,R0_df=10,K_A=1*diag(D))
+#hp<-hyper_init(y,D=D,hp)
+#hp$S0<-diag(diag(hp$S0)) #force diagonal
+#hp$R0<-diag(diag(hp$R0))
+theta_hat<-replicate(K,theta_init(hp),simplify=FALSE)
+lambda_hat<-lambda_init(hp)
+lambda_hat[["R"]]<-lambda[["R"]] #cheat and use the true value for R
+
+res<-sample_lds_posterior(y,z,theta_hat,lambda_hat,hp)
+xhat<-res[["x"]]
+theta_hat<-res[["theta"]]
+xs<-lapply(xhat,function(x){cbind(x,c(0,time))})
+xs<-rLDS_melt(xs,c(colnames(x),"time"))
+#visualize sample trajectory
+ggplot(data=xs,aes(x=time,y=position))+geom_path(aes(group=id),colour="grey")+geom_path(data=x_true,size=0.8,aes(colour=factor(z)))+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Time")+ylab("Position")+ggtitle("Harmonic Motion with Unknown Dynamical Parameters")#+scale_fill_hue(c=85,l=85)
+```
+
+```{r}
+prior_mean<-list()
+prior_mean<-list(A=hp$M_A,B=hp$M_B,Sigma=hp$S0/(hp$S0_df-D-1))
+mse_table<-data.frame(mode=rep(1:K,each=3),param=rep(c("A","B","Sigma"),K),MSE_true=NA,MSE_prior=NA)
+for(zval in 1:K){
+  for(parval in c("A","B","Sigma")){
+    par_post_mean<-list_mean(theta_hat,function(x){x[[zval]][[parval]]})
+    truval<-theta_true[[zval]][[parval]]
+    mseval<-mse(par_post_mean,truval)
+    mseprior<-mse(par_post_mean,prior_mean[[parval]])
+    mse_table[mse_table$mode==zval & mse_table$param==parval, c("MSE_true", "MSE_prior")] <- c(mseval,mseprior)
+  }
+}
+mse_table[,c("MSE_true","MSE_prior")]<-signif(mse_table[,c("MSE_true","MSE_prior")],3)
+pander(mse_table)
+```
+```
