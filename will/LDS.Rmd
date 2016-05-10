@@ -123,13 +123,13 @@ x_0<-x0_init(x)[1:D] #cheating here and using the real values, must be a better 
 #initialize from default settings based on the data.
 #hp<-hyper_init(y,D=D) 
 #alternatively, adjust priors by hand to force stable dynamics
-hp<-list(kappa0=100,S0_df=100,R0_df=100,K_A=100*diag(D))
+hp<-list(kappa0=10,S0_df=10,R0_df=10,K_A=10*diag(D))
 hp<-hyper_init(y,D=D,hp)
-hp$S0<-diag(diag(hp$S0)) #force diagonal
-hp$R0<-diag(diag(hp$R0))
+#hp$S0<-diag(diag(hp$S0)) #force diagonal
+#hp$R0<-diag(diag(hp$R0))
 theta_hat<-replicate(K,theta_init(hp),simplify=FALSE)
 lambda_hat<-lambda_init(hp)
-lambda_hat[["R"]]<-R[1:D,1:D]
+lambda_hat[["R"]]<-R #cheat and use the true value for R
 
 # sample_lds_transition_params<-function(y,z,x,
 # #run linear regression sampler on each chunk to update dynamic params

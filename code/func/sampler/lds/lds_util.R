@@ -42,7 +42,7 @@ rmatnorm<-function(n,M,V,K,foxpar=TRUE){
   lapply(AZs,fn2)
 }
 
-bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
+bayes_mlinreg_post<-function(Y,X,hyper,nBurn=100,nSample=100){
   #Bayesian Multivariate Linear Regression
   #Given hyperparameters and data, run Gibbs Sampler to obtain samples from the posterior of 
   #input: Y= (d by n) outcome matrix
@@ -71,12 +71,12 @@ bayes_mlinreg_post<-function(Y,X,hyper=list(),nBurn=100,nSample=100){
   S0_df<-hyper[["S0_df"]]
   S0<-hyper[["S0"]]
   #set defaults if not specified
-  if(is.null(M_A)) M_A<-matrix(0,nrow=d,ncol=d)
-  if(is.null(M_B)) M_B<-rep(0,d)
-  if(is.null(K_A)) K_A<-matrix(0,nrow=d,ncol=d)
-  if(is.null(kappa0)) kappa0<-.01
-  if(is.null(S0_df)) S0_df<-d+2
-  if(is.null(S0)) S0<-.75*cov(t(Y))
+  # if(is.null(M_A)) M_A<-matrix(0,nrow=d,ncol=d)
+  # if(is.null(M_B)) M_B<-rep(0,d)
+  # if(is.null(K_A)) K_A<-matrix(0,nrow=d,ncol=d)
+  # if(is.null(kappa0)) kappa0<-.01
+  # if(is.null(S0_df)) S0_df<-d+2
+  # if(is.null(S0)) S0<-.75*cov(t(Y))
   #sufficient statistics
   Ymn<-rowMeans(Y)
   Xmn<-rowMeans(X)
