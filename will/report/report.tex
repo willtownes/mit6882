@@ -247,31 +247,39 @@ Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fa
 \subsection{SLDS}
 
 In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
+
 \begin{enumerate}
-\item Two dimensional, two mode SLDS with projectile motion followed by linear motion\\
+\item Two dimensional, two mode SLDS with projectile motion followed by linear motion
 \item One dimensional, three mode SLDS with three different kinds of damped harmonic motion.
 \end{enumerate}
 
-For each scenario, we first used the true dynamical parameters and mode sequence to learn the posterior over the hidden states $x_{1:T}$. Then, we tried learning both the hidden states and the dynamical parameters.
+For each scenario, we first used the true dynamical parameters and mode sequence to learn the posterior over the hidden states $x_{1:T}$ using the Kalman sampler. Then, we tried learning both the hidden states and the dynamical parameters by alternating between Kalman sampling and the multivariate linear regression posterior described above.
 
 \begin{figure}
   \centering
-  \includegraphics[width = 1\linewidth]{"./plot/lds/01_projectile_known"}
-  \includegraphics[width = 1\linewidth]{"./plot/lds/02_projectile_unknown"}
-  \includegraphics[width = 1\linewidth]{"./plot/lds/03_harmonic_known"}
-  \includegraphics[width = 1\linewidth]{"./plot/lds/04_harmonic_unknown"}
+  \includegraphics[width = \linewidth]{"./plot/lds/01_projectile_known"}
+   \includegraphics[width = \linewidth]{"./plot/lds/02_projectile_unknown"}
+   \caption{Dark points=observed positions. Coloured lines= true latent trajectory. Gray lines= samples from posterior. Colours=dynamical modes}
 \end{figure}
 
+\begin{figure}
+  \includegraphics[width = \linewidth]{"./plot/lds/03_harmonic_known"}
+  \includegraphics[width = \linewidth]{"./plot/lds/04_harmonic_unknown"}
+  \caption{Dark points=observed positions. Coloured lines= true latent trajectory. Gray lines= samples from posterior. Colours=dynamical modes}
+\end{figure}
+\clearpage
 
+As shown in the figures, we found that in many cases the posterior over trajectories inferred by the sampler with unknown dynamical parameters was similar to what was inferred by specifying the true parameters. Individual trajectories sampled with unknown dynamical parameters tended to be noisier, especially in regions of sharp change. Interestingly, switch points between modes (indicated by colour) did not have greater uncertainty than sharp changes within a mode.
+
+We found that the choice of hyperparameters was crucial to stable sampling. Specifically, using weak priors caused samplers to diverge or run into numerical problems, particularly in the case of nonstationary dynamics and/or high dimensional latent states (scenario 1). To remedy this, we used a heuristic of first estimating the latent trajectory roughly by computing local regressions (LOESS) over each observed dimension versus time, then setting the hyperprior scale matrix for $\Sigma$ based on the empirical covariance of the observations versus the LOESS prediction at that point. If $y_t\in\mathbb{R}^n$ and $x_t\in\mathbb{R}^d$, this procedure accounts for the first $n$ dimensions of $x_t$. The remaining $d-n$ elements of the scale matrix were set to a diagonal with determinant equal to the first $n$ block. This is a generalization of the procedure given by \cite{fox_bayesian_2009}, which can be considered a special case where the LOESS bandwidth is set very wide. We were able to get away with weaker priors for the stationary dynamical system (scenario 2).
+
+We also compared our estimates for the dynamical parameters to their true values using mean squared error. Interestingly, in most cases the MSE between the posterior means (empirically computed from samples) and the priors was less than MSE between posterior means and true values. This reinforces the fact that the prior held a great influence over the results in these models.
 
 \subsection{HDP-SLDS}
 
-
 \section{Conclusion and Future Direction}
 
-\subsection{Sampling Hyperparameters}
-
-\subsection{Automatic Relevance Determination}
+Based on our results that hyperparameter settings are crucial to numerical stability of SLDS inference, we suspect that using less general models such as autoregressive structures, or employing sparsity promoting priors such as automatic relevance determination (ARD) could have advantages over the conjugate prior we employed. Indeed \cite{fox_bayesian_2009} considered such alternative priors and found many benefits. This makes sense intuitively, in that the matrix normal/ inverse wishart prior induces a larger parameter space which is only partially alleviated by strongly regularizing hyperparameters. Furthermore, conjugacy of a prior, while mathematically convenient, does not imply appropriateness to the model at hand. Finally, we note that in modeling dynamical systems, it is not unrealistic to assume strong prior information may be available, for example if the trajectory is a physical system like we considered. Future studies should consider how to design priors that reflect this kind of information in the model.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Start of Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
