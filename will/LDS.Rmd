@@ -115,147 +115,29 @@ In the above plot, the dark line is the true path, the points are the noisy obse
 We now integrate the results from matnorm.Rmd to sample from the conditional distribution of the unknown dynamical parameters. Alternating between this and the trajectory path sample enables inference for the full set of unknown parameters.
 
 ```{r}
-hyper_init<-function(y,D=ncol(y),hyper=list()){
-  #given a matrix of observations "y" (each row is an observation vector) nrow=number of time points
-  #specify the desired dimension of the latent state x
-  #returns a list of hyperparameters for the matrix normal inverse wishart prior over dynamical parameters
-  # the hyperparameters are:
-  # S0_df = prior degrees of freedom on Sigma, the transition model covariance/noise
-  # S0 = prior scale matrix for Sigma
-  # R0_df = prior degrees of freedom on R, the emission model covariance/noise (observation noise)
-  # R0 = prior scale matrix for R
-  # M_B = (vector) prior mean for additive term B in transition model
-  # kappa0 = prior sample size for B
-  # M_A = (matrix) prior mean for the transition matrix A of the latent states
-  # K_A = inverse of "column covariance" matrix in prior for A
-  # Any matching params in the input list "hyper" are returned as-is
-  # otherwise, the params are set based on statistics of the observed data y
-  # lowess_f only needed for S0 or R0 estimation. Small value=wigglier estimated latent x values
-  # large value= more linear latent x values path
-  ydim<-ncol(y)
-  stopifnot(D>=ydim)
-  if(is.null(hyper[["S0_df"]])) hyper[["S0_df"]]<-D+2
-  if(is.null(hyper[["R0_df"]])) hyper[["R0_df"]]<-ydim+2
-  if(is.null(hyper[["M_B"]])) hyper[["M_B"]]<-rep(0,D)
-  if(is.null(hyper[["kappa0"]])) hyper[["kappa0"]]<-.01
-  if(is.null(hyper[["M_A"]])) hyper[["M_A"]]<-diag(D)
-  if(is.null(hyper[["K_A"]])) hyper[["K_A"]]<-.01*diag(D)
-  if(!is.null(hyper[["S0"]]) && !is.null(hyper[["R0"]])) return(hyper)
-  S0_df<-hyper[["S0_df"]]
-  R0_df<-hyper[["R0_df"]]
-  #case where either R0 or S0 not specified, estimate from covariance of data:
-  Tmax<-nrow(y)
-  time<-1:Tmax
-  lowess_f<-60/Tmax #fraction of data points used to estimate x from y, essentially 5 nearest neighbors
-  lws_func<-function(u,f){
-    # infer latent x column for one of y's columns
-    #print(str(u))
-    lowess(time,u,f=f)$y
-  }
-  xhat<-apply(y,2,function(u){lws_func(u,lowess_f)})
-  if(is.null(hyper[["R0"]])) hyper[["R0"]]<-cov(y-xhat) #*(R0_df-ydim-1)
-  #R0<-hyper[["R0"]]
-  #xtrend<-apply(xhat,2,function(u){lws_func(u,20/Tmax)})
-  if(is.null(hyper[["S0"]])){
-    S0<-matrix(0,nrow=D,ncol=D)
-    #S0_topleft<-cov(xhat-xtrend)
-    #S0_topleft<-cov(xhat[2:Tmax,]-xhat[1:(Tmax-1),]) 
-    S0_topleft<-cov(xhat)
-    S0[1:ydim,1:ydim]<-S0_topleft
-    S0[(ydim+1):D,(ydim+1):D]<-diag(D-ydim)*det(S0_topleft)/(D-ydim) #formula from E. Fox thesis p. 160
-    hyper[["S0"]]<-.01*S0 #*(S0_df-D-1)
-  }
-  return(hyper)
-}
-# sample a set of parameters theta from the prior defined by the passed-in hyperparameters
-theta_init<-function(hp){
-  # hp is a list of hyperparameters (see init_mniw_hyper)
-  # this is a sample from the prior for initialization, use bayes_mlinreg_post to sample from full conditional
-  Sigma<-riwish(hp$S0_df,hp$S0)
-  B<-mvrnorm(1,hp$M_B,Sigma/hp$kappa0)
-  A<-rmatnorm(1,hp$M_A,Sigma,hp$K_A,foxpar=TRUE)[[1]]
-  return(list(Sigma=Sigma,A=A,B=B))
-}
-lambda_init<-function(hp){
-  # C matrix regarded as fixed and known
-  # R matrix random but constant across all dynamical modes
-  R<-riwish(hp$R0_df,hp$R0)
-  ydim<-ncol(R)
-  D<-ncol(hp$S0)
-  C<-matrix(0,nrow=ydim,ncol=D)
-  C[1:ydim,1:ydim]<-diag(ydim)
-  return(list(R=R,C=C))
-}
-x0_init<-function(x,time=1:10){
-  # given other xvalues, initialize x0 by linear extrapolation
-  # x is a matrix with each row = an observation vector
-  # time is the index vector of observations used to extrapolate to time zero
-  x<-x[time,]
-  coef(lm(x~time))[1,]
-}
-```
-
-```{r}
 ggbase<-ggplot(data=xs,aes(x=pos_horiz,y=pos_vert))+geom_path(data=x_true,aes(colour=factor(z)),size=1)+geom_point(data=y_obs,size=1.1)+theme_bw()+xlab("Horizontal Position")+ylab("Vertical Position")+ggtitle("Switching Projectile/Linear Dynamics")
 theta_true<-theta
 K<-2 #number of dynamical modes
 D<-4 #latent dimension
-hp<-hyper_init(y,D=D) #initialize from default settings based on the data.
-#alternatively, set priors by hand
-#hp<-list(kappa0=10,S0_df=10,R0_df=10,K_A=10*diag(D),S0=)
-
-#hp$S0<-diag(diag(hp$S0)) #force diagonal
-#hp$R0<-diag(diag(hp$R0))
+x_0<-x0_init(x)[1:D] #cheating here and using the real values, must be a better way?
+#initialize from default settings based on the data.
+#hp<-hyper_init(y,D=D) 
+#alternatively, adjust priors by hand to force stable dynamics
+hp<-list(kappa0=100,S0_df=100,R0_df=100,K_A=100*diag(D))
+hp<-hyper_init(y,D=D,hp)
+hp$S0<-diag(diag(hp$S0)) #force diagonal
+hp$R0<-diag(diag(hp$R0))
 theta_hat<-replicate(K,theta_init(hp),simplify=FALSE)
 lambda_hat<-lambda_init(hp)
-x_0<-x0_init(x) #cheating here and using the real values, must be a better way?
-# D<-4 #dimension of latent state
-# ydim<-ncol(y)
-# nIter<-nrow(y)
-# #use lowess to get a first estimate of latent x values
-# xhat_y<-y
-# lowess_resid_var<-list()
-# for(j in 1:ydim){
-#   xhat_y[,j]<-lowess(1:nIter,y[,j],f=.5)[["y"]]
-#   lowess_resid_var[[j]]<-mse(y[,j],xhat_y[,j])
-# }
-# xhat_latent<-matrix(rnorm(nIter*(D-ncol(y))),nrow=nIter)
-# xhat<-cbind(xhat_y,xhat_latent) #initialize sampled x
-# #split data into chunks based on z and initialize dynamical params "theta"
-# theta_hat<-list()
-# lambda_hat<-lambda
-# for(k in 1:K){
-#   z_index<-which(z==k)
-#   theta_hat[[k]]<-list()
-#   psi<-xhat[z_index,]
-#   if(1 %in% z_index){
-#     z_index<-z_index[z_index!=1] #omit 1
-#     psibar<-rbind(x_0,xhat[z_index-1,]) #previous latent observations
-#   } else {
-#     psibar<-xhat[z_index-1,]
-#   }
-#   lm_init<-lm(psi~psibar) #multivariate linreg
-#   theta_hat[[k]][["A"]]<-0.5*t(coef(lm_init))[,2:(D+1)]+.5*diag(D)
-#   theta_hat[[k]][["B"]]<-0.5*t(coef(lm_init))[,1]
-#   theta_hat[[k]][["Sigma"]]<-0.5*diag(unlist(lapply(summary(lm_init),function(x){x$sigma^2})))
-# }
-# avg_Sigma<-list_mean(theta_hat,function(x){x[["Sigma"]]})
-# lambda_hat[["R"]]<-avg_Sigma[1:ydim,1:ydim]
-# lambda_hat[["R"]]<-lambda[["R"]] #temporarily pretend this is known
-# #set hyperparameters
-# Delta0<-.5*diag(rep(lowess_resid_var,2))
-# #Delta0<-diag(D)
-# #Delta0<-Sigma #pretend this is known
-# M_A<-diag(D)
-# #M_A<-A #pretend known
-# hp<-list(nu0=D+10,kappa0=10,K_A=10*diag(D),Delta0=Delta0)
+lambda_hat[["R"]]<-R[1:D,1:D]
+
 #now that theta,lambda have been initialized, run Kalman Smoother to sample xhat
 for(j in 1:500){
   #lambda[["C"]] regarded as known
   xhat<-rLDS(1,y,z,theta_hat,lambda_hat,x0_return=FALSE)[[1]]
   if(j%%25==0){
     #print(paste("x0=",xhat[1,]))
-    xhat_plt<-rLDS_melt(list(xhat),colnames(x))
+    xhat_plt<-rLDS_melt(list(xhat),colnames(x)[1:D])
     #visualize sample trajectory
     show(ggbase+geom_path(data=xhat_plt,linetype=2,aes(group="id")))
   }

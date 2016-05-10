@@ -263,3 +263,86 @@ rLDS_melt<-function(LDS_samples,cnames=NULL){
     return(res)
   }
 }
+
+### Functions for initializing Dynamical Parameters Priors from Data
+
+hyper_init<-function(y,D=ncol(y),hyper=list()){
+  #given a matrix of observations "y" (each row is an observation vector) nrow=number of time points
+  #specify the desired dimension of the latent state x
+  #returns a list of hyperparameters for the matrix normal inverse wishart prior over dynamical parameters
+  # the hyperparameters are:
+  # S0_df = prior degrees of freedom on Sigma, the transition model covariance/noise
+  # S0 = prior scale matrix for Sigma
+  # R0_df = prior degrees of freedom on R, the emission model covariance/noise (observation noise)
+  # R0 = prior scale matrix for R
+  # M_B = (vector) prior mean for additive term B in transition model
+  # kappa0 = prior sample size for B
+  # M_A = (matrix) prior mean for the transition matrix A of the latent states
+  # K_A = inverse of "column covariance" matrix in prior for A
+  # Any matching params in the input list "hyper" are returned as-is
+  # otherwise, the params are set based on statistics of the observed data y
+  # lowess_f only needed for S0 or R0 estimation. Small value=wigglier estimated latent x values
+  # large value= more linear latent x values path
+  ydim<-ncol(y)
+  stopifnot(D>=ydim)
+  if(is.null(hyper[["S0_df"]])) hyper[["S0_df"]]<-D+2
+  if(is.null(hyper[["R0_df"]])) hyper[["R0_df"]]<-ydim+2
+  if(is.null(hyper[["M_B"]])) hyper[["M_B"]]<-rep(0,D)
+  if(is.null(hyper[["kappa0"]])) hyper[["kappa0"]]<-.01
+  if(is.null(hyper[["M_A"]])) hyper[["M_A"]]<-diag(D)
+  if(is.null(hyper[["K_A"]])) hyper[["K_A"]]<-.01*diag(D)
+  if(!is.null(hyper[["S0"]]) && !is.null(hyper[["R0"]])) return(hyper)
+  S0_df<-hyper[["S0_df"]]
+  R0_df<-hyper[["R0_df"]]
+  #case where either R0 or S0 not specified, estimate from covariance of data:
+  Tmax<-nrow(y)
+  time<-1:Tmax
+  lowess_f<-20/Tmax #fraction of data points used to estimate x from y, essentially 5 nearest neighbors
+  lws_func<-function(u,f){
+    # infer latent x column for one of y's columns
+    #print(str(u))
+    lowess(time,u,f=f)$y
+  }
+  xhat<-apply(y,2,function(u){lws_func(u,lowess_f)})
+  if(is.null(hyper[["R0"]])) hyper[["R0"]]<-cov(y-xhat) #*(R0_df-ydim-1)
+  #R0<-hyper[["R0"]]
+  xtrend<-apply(xhat,2,function(u){lws_func(u,40/Tmax)})
+  if(is.null(hyper[["S0"]])){
+    S0<-matrix(0,nrow=D,ncol=D)
+    S0_topleft<-cov(xhat-xtrend)
+    #S0_topleft<-cov(xhat[2:Tmax,]-xhat[1:(Tmax-1),]) 
+    #S0_topleft<-cov(xhat)
+    S0[1:ydim,1:ydim]<-S0_topleft
+    if(D>ydim){
+      S0[(ydim+1):D,(ydim+1):D]<-diag(D-ydim)*det(S0_topleft)/(D-ydim) #formula from E. Fox thesis p. 160
+    }
+    hyper[["S0"]]<- S0 #*(S0_df-D-1)
+  }
+  return(hyper)
+}
+# sample a set of parameters theta from the prior defined by the passed-in hyperparameters
+theta_init<-function(hp){
+  # hp is a list of hyperparameters (see init_mniw_hyper)
+  # this is a sample from the prior for initialization, use bayes_mlinreg_post to sample from full conditional
+  Sigma<-riwish(hp$S0_df,hp$S0)
+  B<-mvrnorm(1,hp$M_B,Sigma/hp$kappa0)
+  A<-rmatnorm(1,hp$M_A,Sigma,hp$K_A,foxpar=TRUE)[[1]]
+  return(list(Sigma=Sigma,A=A,B=B))
+}
+lambda_init<-function(hp){
+  # C matrix regarded as fixed and known
+  # R matrix random but constant across all dynamical modes
+  R<-riwish(hp$R0_df,hp$R0)
+  ydim<-ncol(R)
+  D<-ncol(hp$S0)
+  C<-matrix(0,nrow=ydim,ncol=D)
+  C[1:ydim,1:ydim]<-diag(ydim)
+  return(list(R=R,C=C))
+}
+x0_init<-function(x,time=1:10){
+  # given other xvalues, initialize x0 by linear extrapolation
+  # x is a matrix with each row = an observation vector
+  # time is the index vector of observations used to extrapolate to time zero
+  x<-x[time,]
+  coef(lm(x~time))[1,]
+}
