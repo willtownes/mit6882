@@ -276,8 +276,6 @@ $\balpha^p =
 
 \section{Results}
 
-\subsection{HDP-HMM}
-
 \subsection{SLDS}
 
 In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Details of converting from differential equations to LDS parameters are given in Appendix \ref{sec:ode2lds}. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
@@ -290,17 +288,30 @@ In this section we assume known observation noise $R$ and hidden mode sequence $
 For each scenario, we first used the true dynamical parameters and mode sequence to learn the posterior over the hidden states $x_{1:T}$ using the Kalman sampler. Then, we tried learning both the hidden states and the dynamical parameters by alternating between Kalman sampling and the multivariate linear regression posterior described above.
 
 \begin{figure}
+\begin{subfigure}[b]{\textwidth}
   \centering
   \includegraphics[width = \linewidth]{"./plot/lds/01_projectile_known"}
+\end{subfigure}
+
+\begin{subfigure}[b]{\textwidth}
    \includegraphics[width = \linewidth]{"./plot/lds/02_projectile_unknown"}
+ \end{subfigure}
    \caption{Dark points=observed positions. Coloured lines= true latent trajectory. Gray lines= samples from posterior. Colours=dynamical modes}
 \end{figure}
 
 \begin{figure}
+\begin{subfigure}[b]{\textwidth}
+  \centering
   \includegraphics[width = \linewidth]{"./plot/lds/03_harmonic_known"}
+\end{subfigure}
+
+\begin{subfigure}[b]{\textwidth}
   \includegraphics[width = \linewidth]{"./plot/lds/04_harmonic_unknown"}
-  \caption{Dark points=observed positions. Coloured lines= true latent trajectory. Gray lines= samples from posterior. Colours=dynamical modes}
+ \end{subfigure}
+   \caption{Dark points=observed positions. Coloured lines= true latent trajectory. Gray lines= samples from posterior. Colours=dynamical modes}
 \end{figure}
+
+
 \clearpage
 
 As shown in the figures, we found that in many cases the posterior over trajectories inferred by the sampler with unknown dynamical parameters was similar to what was inferred by specifying the true parameters. Individual trajectories sampled with unknown dynamical parameters tended to be noisier, especially in regions of sharp change. Interestingly, switch points between modes (indicated by colour) did not have greater uncertainty than sharp changes within a mode.
