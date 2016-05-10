@@ -10,12 +10,12 @@
 \contentsline {subsection}{\numberline {4.2}Automatic Relevance Determination}{2}{subsection.4.2}
 \contentsline {section}{\numberline {A}Hierarchical Dirichlet Process}{2}{appendix.A}
 \contentsline {subsection}{\numberline {A.1}Model}{2}{subsection.A.1}
-\contentsline {subsection}{\numberline {A.2}Inference}{3}{subsection.A.2}
-\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{4}{subsection.A.3}
-\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{5}{appendix.B}
-\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{5}{subsection.B.1}
-\contentsline {subsection}{\numberline {B.2}Sticky HDP}{5}{subsection.B.2}
-\contentsline {subsection}{\numberline {B.3}Inference }{5}{subsection.B.3}
-\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{6}{subsubsection.B.3.1}
-\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{7}{appendix.C}
-\contentsline {section}{\numberline {D}References}{8}{appendix.D}
+\contentsline {subsection}{\numberline {A.2}Inference}{2}{subsection.A.2}
+\contentsline {subsection}{\numberline {A.3}Application: Clustering Hierarchical Gaussian Data}{3}{subsection.A.3}
+\contentsline {section}{\numberline {B}HDP for Hidden Markov Model}{4}{appendix.B}
+\contentsline {subsection}{\numberline {B.1}Hidden Markov Model}{4}{subsection.B.1}
+\contentsline {subsection}{\numberline {B.2}Sticky HDP}{4}{subsection.B.2}
+\contentsline {subsection}{\numberline {B.3}Inference }{4}{subsection.B.3}
+\contentsline {subsubsection}{\numberline {B.3.1}Forward-backward Message Passing}{5}{subsubsection.B.3.1}
+\contentsline {section}{\numberline {C}Chinese Restaurant Franchise}{6}{appendix.C}
+\contentsline {section}{\numberline {D}References}{7}{appendix.D}

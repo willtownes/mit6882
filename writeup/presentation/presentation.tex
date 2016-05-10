@@ -100,7 +100,7 @@
 %	TITLE PAGE
 %----------------------------------------------------------------------------------------
 
-\title[HDP-HMM-SLDS]{Hierarchical Dirichlet Process and Switching Linear Dynamical Systems} % The short title appears at the bottom of every slide, the full title is only on the title page
+\title[HDP-HMM-SLDS]{Hierarchical Dirichlet Process for Switching Linear Dynamical Systems} % The short title appears at the bottom of every slide, the full title is only on the title page
 
 \author{Will Townes, Jeremiah Zhe Liu} % Your name
 
@@ -122,7 +122,237 @@
 %----------------------------------------------------------------------------------------
 
 %%% Jeremiah Section
-\section{Hierarchical Dirichlet Process and Hidden Markov Model}
+\section{Overview}
+\begin{frame}
+\frametitle{How to Estimate?}
+Fighter pilot's
+\begin{itemize}
+\item Maneuvering style
+\item Maneuvering strategy
+\end{itemize}
+
+\begin{figure}
+\includegraphics[width=0.9\textwidth]{"./plot/trajectory"}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Switching Linear Dynamical System}
+\begin{minipage}{0.35\textwidth}
+$\{\bA, \bB\} \in \Asc \times \Bsc = \bTheta$ 
+\begin{alignat*}{3}
+{\color{red}z_t}  & \sim Markov ({\color{red}\bPi})
+\\
+x_t | {\color{red} z_t} & = {\color{red}\bA_{z_t}} x_{t-1} + {\color{red}\bB_{z_t}} \\
+y_t | x_t & \sim F(x_t)
+\end{alignat*}
+
+Dimension?
+\begin{enumerate}
+\item<2-> $dim(\Zsc) = |\Zsc|$
+\item<2-> $dim(\bPi) = O(|\Zsc|^2)$
+\item<2-> $dim(\bTheta) = O(d_x^2 * |\Zsc|)$
+\end{enumerate}
+
+\end{minipage}
+\begin{minipage}{0.6\textwidth}
+\begin{figure}[!h]
+      \centering
+\begin{tikzpicture}[scale = 0.2]
+        \node[latent] (pi_j) {$\pi_j$} ; 
+        \node[latent, below = of pi_j] (theta_k) {$\theta_k$} ; 
+        \node[latent, below right = 0.7cm of pi_j] (z_1) {$z_1$} ; %     
+        \node[latent, right = of z_1] (z_t) {$z_t$} ; %                  
+        \node[latent, right = of z_t] (z_T) {$z_T$} ; %                            
+        \node[latent, below right = 0.7cm of theta_k] (x_1) {$x_1$} ; %     
+        \node[latent, right = of x_1] (x_t) {$x_t$} ; %         
+        \node[latent, right = of x_t] (x_T) {$x_T$} ; %                                  
+        \node[obs, below = 0.5cm of x_1] (y_1) {$y_1$} ; %     
+        \node[obs, right = of y_1] (y_t) {$y_t$} ; %         
+        \node[obs, right = of y_t] (y_T) {$y_T$} ; %                                          
+        %
+        \plate{plate_pi} {(pi_j)} {$\infty$}; %
+        \plate{plate_theta} {(theta_k)} {$\infty$}; %        
+		%        
+        \edge {pi_j} {z_1} ; %                               
+        \edge {pi_j} {z_t} ; % 
+        \edge {pi_j} {z_T} ; %         
+        \edge {z_1} {z_t} ; %                               
+        \edge {z_t} {z_T} ; %                                       
+        \edge {theta_k} {x_1} ; %                               
+        \edge {theta_k} {x_t} ; % 
+        \edge {theta_k} {x_T} ; %         
+        \edge {z_1} {x_1} ; % 
+        \edge {z_t} {x_t} ; %         
+        \edge {z_T} {x_T} ; %   
+        \edge {x_1} {x_t}; %
+        \edge {x_t} {x_T}; %                  
+        \edge {x_1} {y_1} ; % 
+        \edge {x_t} {y_t} ; %         
+        \edge {x_T} {y_T} ; %                   
+\end{tikzpicture}            
+\end{figure}
+\end{minipage}
+\end{frame}
+
+\section{Prior for HMM}
+
+\begin{frame}
+\frametitle{Keep Calm...}
+\begin{minipage}{0.35\textwidth}
+and put a prior...
+\begin{itemize}
+\item $\pi_j \sim DP(\alpha, \beta)$
+\item But....
+\end{itemize}
+
+\end{minipage}
+\begin{minipage}{0.55\textwidth}
+\begin{figure}[!h]
+      \centering
+\begin{tikzpicture}[scale = 0.4]
+        \node[det] (gamma) {$\gamma$} ; %
+        \node[det, below = 0.5cm of gamma] (alpha) {$\alpha$}; 
+        \node[det, below = 0.2cm of alpha] (kappa) {$\kappa$};       
+        \node[det, below = 0.2cm of kappa] (lambda) {$\lambda$};       
+        \node[latent, right = of gamma] (beta) {$\beta$} ; %                
+        \node[latent, right = of alpha] (pi_j) {$\pi_j$} ; 
+        \node[latent, right = of lambda] (theta_k) {$\theta_k$} ; 
+        \node[latent, below right = 0.7cm of pi_j] (z_1) {$z_1$} ; %     
+        \node[latent, right = of z_1] (z_t) {$z_t$} ; %                  
+        \node[latent, right = of z_t] (z_T) {$z_T$} ; %                            
+        \node[latent, below right = 0.7cm of theta_k] (x_1) {$x_1$} ; %     
+        \node[latent, right = of x_1] (x_t) {$x_t$} ; %         
+        \node[latent, right = of x_t] (x_T) {$x_T$} ; %                                  
+        \node[obs, below = 0.5cm of x_1] (y_1) {$y_1$} ; %     
+        \node[obs, right = of y_1] (y_t) {$y_t$} ; %         
+        \node[obs, right = of y_t] (y_T) {$y_T$} ; %                                          
+        %
+        \plate{plate_pi} {(pi_j)} {$\infty$}; %
+        \plate{plate_theta} {(theta_k)} {$\infty$}; %        
+		%        
+        \edge {gamma} {beta} ; %       
+        \edge {beta} {pi_j} ; %               
+        \edge {alpha} {pi_j} ; %                       
+        \edge {kappa} {pi_j} ; %                       
+        \edge {lambda} {theta_k} ; %                               
+        \edge {pi_j} {z_1} ; %                               
+        \edge {pi_j} {z_t} ; % 
+        \edge {pi_j} {z_T} ; %         
+        \edge {z_1} {z_t} ; %                               
+        \edge {z_t} {z_T} ; %                                       
+        \edge {theta_k} {x_1} ; %                               
+        \edge {theta_k} {x_t} ; % 
+        \edge {theta_k} {x_T} ; %         
+        \edge {z_1} {x_1} ; % 
+        \edge {z_t} {x_t} ; %         
+        \edge {z_T} {x_T} ; %   
+        \edge {x_1} {x_t}; %
+        \edge {x_t} {x_T}; %                  
+        \edge {x_1} {y_1} ; % 
+        \edge {x_t} {y_t} ; %         
+        \edge {x_T} {y_T} ; %                   
+\end{tikzpicture}            
+\end{figure}
+\end{minipage}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{What does HDP mean in HMM?}
+\begin{minipage}{0.35\textwidth}
+Restaurant Analogy?
+\begin{itemize}
+\item Global Dish Menu?
+\item Local Dish Menu?
+\item Restaurant?
+\item Dish?
+\item Customer?
+\end{itemize}
+Better Analogy?
+\end{minipage}
+\begin{minipage}{0.55\textwidth}
+\begin{figure}[!h]
+      \centering
+\begin{tikzpicture}[scale = 0.4]
+        \node[det] (gamma) {$\gamma$} ; %
+        \node[det, below = 0.5cm of gamma] (alpha) {$\alpha$}; 
+        \node[det, below = 0.2cm of alpha] (kappa) {$\kappa$};       
+        \node[det, below = 0.2cm of kappa] (lambda) {$\lambda$};       
+        \node[latent, right = of gamma] (beta) {$\beta$} ; %                
+        \node[latent, right = of alpha] (pi_j) {$\pi_j$} ; 
+        \node[latent, right = of lambda] (theta_k) {$\theta_k$} ; 
+        \node[latent, below right = 0.7cm of pi_j] (z_1) {$z_1$} ; %     
+        \node[latent, right = of z_1] (z_t) {$z_t$} ; %                  
+        \node[latent, right = of z_t] (z_T) {$z_T$} ; %                            
+        \node[latent, below right = 0.7cm of theta_k] (x_1) {$x_1$} ; %     
+        \node[latent, right = of x_1] (x_t) {$x_t$} ; %         
+        \node[latent, right = of x_t] (x_T) {$x_T$} ; %                                  
+        \node[obs, below = 0.5cm of x_1] (y_1) {$y_1$} ; %     
+        \node[obs, right = of y_1] (y_t) {$y_t$} ; %         
+        \node[obs, right = of y_t] (y_T) {$y_T$} ; %                                          
+        %
+        \plate{plate_pi} {(pi_j)} {$\infty$}; %
+        \plate{plate_theta} {(theta_k)} {$\infty$}; %        
+		%        
+        \edge {gamma} {beta} ; %       
+        \edge {beta} {pi_j} ; %               
+        \edge {alpha} {pi_j} ; %                       
+        \edge {kappa} {pi_j} ; %                       
+        \edge {lambda} {theta_k} ; %                               
+        \edge {pi_j} {z_1} ; %                               
+        \edge {pi_j} {z_t} ; % 
+        \edge {pi_j} {z_T} ; %         
+        \edge {z_1} {z_t} ; %                               
+        \edge {z_t} {z_T} ; %                                       
+        \edge {theta_k} {x_1} ; %                               
+        \edge {theta_k} {x_t} ; % 
+        \edge {theta_k} {x_T} ; %         
+        \edge {z_1} {x_1} ; % 
+        \edge {z_t} {x_t} ; %         
+        \edge {z_T} {x_T} ; %   
+        \edge {x_1} {x_t}; %
+        \edge {x_t} {x_T}; %                  
+        \edge {x_1} {y_1} ; % 
+        \edge {x_t} {y_t} ; %         
+        \edge {x_T} {y_T} ; %                   
+\end{tikzpicture}            
+\end{figure}
+\end{minipage}
+\end{frame}
+
+\begin{frame}
+\frametitle{HDP in HMM: Mario's Warp Pipe Process}
+\begin{figure}
+\includegraphics[width=1\linewidth]{"./plot/mario_pipe"}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{HDP in SLDS: Inference Overview}
+Need to sample $(\bz, \beta, \bPi)$ and $(\bx, \bTheta)$ jointly:
+\begin{itemize}
+\item Sample $\bz, \beta, \bPi | \bTheta, \bx$
+\begin{enumerate}
+\item Sample $\bz \sim p(\bz | \bPi, \bTheta, \bx)$
+\begin{itemize}
+\item In contrast to conditional sampler in original HDP \\
+ $p(z_t = k| \bz_{(-t)}, \beta) = p(z_t = k| \by)f(y_t|\by_{-(t)})$
+\item efficiently algorithm available for Markov Model\\
+(Forward-backward Message Passing)
+\end{itemize}
+\item Sample $\beta, \pi_k$ through standard CRF:
+\begin{itemize}
+\item $\beta | \bz \sim Dir(\bm, \gamma)$
+\item $\pi_k | \beta, \bz \sim Dir(\alpha \beta_k + n_k)$
+\end{itemize}
+\end{enumerate}
+\item Sample $\bx, \bTheta | \bz, \beta, \bPi$
+\end{itemize}
+
+\end{frame}
+
+
 
 %%% Begin Will Section here
 \section{Switching Linear Dynamical Systems}
