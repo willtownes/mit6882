@@ -219,7 +219,7 @@ In the rest of this report, we discuss how to properly adapt HDP into the estima
 
 \section{Methods}
 
-As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$. Due to our goal of sampling dynamic parameters $\btheta$ on a state-space model, we have to battle several technical difficulties such as (1) choosing proper prior for $\btheta$, (2) identify efficient algorithm for computing $p(\bz|\by, \bTheta, \bPi)$ on Markov time series, and (3) explicit sampling for infinite dimensional $\pi_j$. These problems are not encountered in classical HDP \citep{teh_hierarchical_2006} due to the lack of time-series dependency between observations, and the fact that $\btheta$ are not of interest in classical HDP and therefore $\btheta$, $\pi_j$ can be integrated out in their Gibbs sampler. In this section, we discuss how we have overcame the three aforementioned difficulties and constructed our Gibbs sampler for efficient and regularized joint inference of $\bTheta$ and $\bPi$. We implemented the methods in R, code is available at \url{https://github.com/willtownes/mit6882}.
+As shown in the graphical model, the full conditional for the hidden continuous states $x_{1:T}$ is a time-varying (switching) linear dynamical system (SLDS), while the full conditional for the hidden categorical modes $z_{1:T}$ is a hidden markov model (HMM) for finite $\bPi$. Due to our goal of sampling dynamic parameters $\btheta$ on a state-space model, we have to battle several technical difficulties such as (1) choosing proper prior for $\btheta$, (2) identify efficient algorithm for computing $p(\bz|\by, \bTheta, \bPi)$ on Markov time series, and (3) explicit sampling for infinite dimensional $\pi_j$. These problems are not encountered in classical HDP \citep{teh_hierarchical_2006} due to the lack of time-series dependency between observations, and the fact that $\btheta$ are not of interest in classical HDP and therefore $\btheta$, $\pi_j$ can be integrated out in their Gibbs sampler. In this section, we discuss how we have overcome the three aforementioned difficulties and constructed our Gibbs sampler for efficient and regularized joint inference of $\bTheta$ and $\bPi$. We implemented the methods in R, code is available at \url{https://github.com/willtownes/mit6882}.
 
 \subsection{Sampling Dynamical Parameters $\btheta$ using Matrix Normal Prior}
 
@@ -232,7 +232,7 @@ This is a multivariate version of linear regression, where $\mathcal{MN}$ denote
 
 Conditional on other unknowns, sampling the hidden states $x_{1:T}$ can be performed simultaneously rather than sequentially. This leads to faster mixing by reducing the dimensionality of the parameter space. The full conditional distribution can be obtained in closed form by running a Kalman smoother, which uses forward and backward message passing over the sequential observations. However, since we only want to sample from this distribution, we can equivalently pass messages in one direction and recursively sample in the other direction. This saves computation time since message passing requires marginalizing over each $x_t$, which involves inverting $d_x\times d_x$ matrices. We refer to this procedure as a ``Kalman Sampler''. Full derivations are provided in Appendix \ref{sec:ap_kalman}.
 
-Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, due to the Markovian decomposition of $p(\bz | \by) = \Big[ \prod_{t=2}^T p(z_t| z_{t-1}, \by) \Big] * p(z_1|\by)$.
+Similarly, hidden categories $\bz$ can also be sampled jointly in the forward fashion, since the conditional probability structure is identical to that of $x_{1:T}$, except that the variables of interest are categorical rather than Gaussian. Therefore, we simply replace integration with summation in the backward message passing. This is a sampling version of the classical Forward-Backward algorithm.
 
 \subsection{Sampling Transition Probabilities $\bPi$, $\bbeta$ using HDP Prior}
 Finally, we perform estimation of $\pi_k$, the rows of the transition matrix $\bPi$. We notice that the high-dimensional nature of $\bPi$ ($dim(\bPi) = O(|\Zsc|^2)$) calls for regularization  not only on the individual values of $\pi_{kj}$'s, but more importantly, also on the global dimension of $\bPi$ (equivalently, the cardinality of $\Zsc$) such that the states corresponding to the same dynamics are gathered into the same cluster, which is crucial for stable estimation of $\bTheta_k$'s.
@@ -274,7 +274,6 @@ $\balpha^p =
 \end{algorithmic}
 \end{algorithm}
 
-\newpage
 \section{Results}
 
 \subsection{HDP-HMM}
