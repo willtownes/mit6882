@@ -6,7 +6,7 @@ sourceDir("./func/")
 
 load("will_dat.RData")
 tune_will_data <- FALSE
-use_will_data <- TRUE
+use_will_data <- FALSE
 if (tune_will_data){
   theta[[1]]$B <- theta[[1]]$B/50
   theta[[1]]$Sigma <- theta[[1]]$Sigma/1000
@@ -19,9 +19,13 @@ set.seed(100)
 # z_true <- 
 #   HMM_z(gamma = 1, alpha = 10, kappa = 10, 
 #         K = 2, T = 100)
-z_true <- c(rep(1, 50), rep(2, 50), rep(1, 50), rep(2, 50))
+z_true <- c(rep(1, 50), rep(2, 50), rep(1, 50), rep(2, 50), 
+            rep(1, 50), rep(2, 50), rep(1, 50), rep(2, 50))
 dat <- HMM_SLDS(z_true, theta, x_0 = x_0)
 plot(dat$Y, col = dat$Z, pch = 19, cex = 0.5)
+
+plot(dat$Y, pch = 19, cex = 0.5, xlab = "x", ylab = "y")
+
 
 if (use_will_data){
   z_true <- c(rep(1, 100), rep(2, 100))
@@ -50,7 +54,7 @@ lambda_init <-
 theta_sampler <- sample_theta
 lambda_sampler <- sample_lambda
 
-z_obs <- 
+out_list <- 
   HMM_HDP(
     # data, restaurant number, dish number
     y, K = 2,
@@ -67,7 +71,25 @@ z_obs <-
     z_init = NULL, m_init = NULL, 
     p0_init = NULL, pk_init = NULL,
     # MCMC parameter
-    iter_max = 10, iter_update = 1, verbose = FALSE)
+    iter_max = 50, iter_update = 1, verbose = FALSE)
 
-table(as.factor(z_obs[nrow(z_obs), ]), 
-      as.factor(z_true))
+z_obs <- out_list$z
+table(as.factor(z_obs), as.factor(z_true))
+
+plot(dat$Y[, 1], col = z_obs, pch = 19, cex = 0.5, 
+     xlab = "Time", ylab = "x")
+plot(dat$Y[, 2], col = z_obs, pch = 19, cex = 0.5,
+     xlab = "Time", ylab = "y")
+
+
+#
+z_true <- rep(1, 200)
+
+dat_list <- 
+  cbind(runif(100, 0, 10), runif(100, 0, 10)) %>% 
+  t %>% as.data.frame %>%
+  lapply(function(x_0) HMM_SLDS(z_true, theta, x_0)$X[, 1:2])
+
+plot(0,0, xlim = c(-1e4, 1e4), ylim = c(-1e4, 1e4), 
+     xlab = "x", ylab = "y", main = "Example of 'evade' motion")
+lapply(dat_list, lines, col = rgb(0,0,0,0.2), lwd = 2)

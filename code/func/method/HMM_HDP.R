@@ -235,6 +235,8 @@ HMM_HDP <-
     p0_iter <- p0_iter[iter_burn:ii, ]
     pk_iter <- pk_iter[iter_burn:ii, , ]
     
+    iter_final <- dim(z_iter)[1]
     #### 3. Return ####
-    z_iter
+    list(z = z_iter[iter_final, ], 
+         pk = pk_iter[iter_final, , ])
   }

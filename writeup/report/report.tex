@@ -255,29 +255,37 @@ E(\pi_{kj}) &=
 \end{matrix*}\right.
 \end{align*}
 
-\begin{algorithm}[H]
-\caption{MKL PFBS algorithm}
-\label{alg:MKL}
-\begin{algorithmic}[1]
-\Procedure{{\tt rls\_dual\_mkl\_pfbs}}{$\bK$, $\by$, $(\tau, \mu, \sigma)$}
-\State $\balpha^0=\bzero$
+Summarizing above discussion, we have ensembled following Gibbs sampler for the joint distribution of $p(\btheta, \bx, \bz, \bPi, \bbeta | \by)$. 
 
-\For{$p=1$ to ${\tt MAX\_ITER}$}
+\begin{algorithm}[H]
+\caption{Gibbs Sampler for SLDS with Matrix Normal and Sticky HDP prior}
+\begin{algorithmic}[1]
+\Procedure{{\tt sample\_slds}}{}
+\State Initialize $\btheta^{(0)}, \bx^{(0)}, \bz^{(0)}, \bbeta^{(0)}$ 
+
+\For{$i=1$ to ${\tt MAX\_ITER}$}
 \State
-$\balpha_0^{p} = (1-\frac{\mu}{\sigma})\balpha^{p-1} - \frac{1}{\sigma n}(\bK\balpha^{p-1} - \by) $
+Sample $\btheta^{(i+1)} = \{A_{z}^{(i+1)}, B_{z}^{(i+1)}, \Sigma_{z}^{(i+1)} \}_{z=1}^K$ using Matrix Normal Posterior in Appendix \ref{sec:ap_matnorm} 
 \State
-$\balpha^p =
-  \bS_{\frac{\tau}{\sigma}}(K, \balpha_0^{p})$
+Sample $\bx^{(i+1)} \sim p(\bx | \btheta^{(i+1)}, bz^{(i)},  \bbeta^{(i)}, \bPi^{(i)}, \by)$ using Forward-Backward message passing
+\State
+Sample $\bz^{(i+1)} \sim p(\bz | \btheta^{(i+1)}, bx^{(i+1)}, \bbeta^{(i)}, \bPi^{(i)}, \by)$ using Forward-Backward message passing
+\State
+Sample $\bpi_k^{(i+1)} \sim 
+Dir(\alpha\beta_1 + n_{k1}, \dots, \alpha\beta_K + n_{kK})$, the Sticky weak limit approximation
+\State
+Sample $\bbeta^{(i+1)} \sim 
+Dir(\frac{\gamma}{L} + m_1, \dots, \frac{\gamma}{L} + m_K)$, the Sticky weak limit approximation
 \EndFor
-\State \Return $f^{\tt MAX\_ITER} = (\balpha^{\tt MAX\_ITER})^T\bk$
+\State \Return $\bz^{\tt MAX\_ITER}$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
+where $n_{kj}$ indicates the number of observations transitioned from mode k to j, and $m_j$ indicates the number of "tables" in sticky CRF process that corresponds to state j. For a detailed discussion on Sticky CRF, or "Chinese Restaurant Franchise with Loyal Customers", see Chapter 3 of \citep{fox_bayesian_2009}.
 
 \section{Results}
 
-\subsection{SLDS}
-
+\subsection{SLDS} \label{sec:SLDS}
 In this section we assume known observation noise $R$ and hidden mode sequence $z_{1:T}$ and focus on inference of $\Theta$ and $x_{1:T}$. We simulated several datasets corresponding to physical systems, including projectile motion, linear motion, and harmonic motion (mass on a spring). Note that since any high order linear differential equation can be reformulated as a system of first order differential equations, we can simulate highly nonlinear trajectories with a sufficiently high latent state space. For example, projectile motion and harmonic motion have second order dynamics. For two-dimensional projectile motion, we used a latent space of dimension 4. For one dimensional harmonic motion, we used a latent space of dimension two. Details of converting from differential equations to LDS parameters are given in Appendix \ref{sec:ode2lds}. Projectile and linear motion are non-stationary, while harmonic motion is stationary. \cite{fox_bayesian_2009} considered only stationary motion. To test our implementations, we considered the following scenarios:
 
 \begin{enumerate}
@@ -360,6 +368,33 @@ mode & param & MSE (vs truth) & MSE (vs prior) \\ \hline
 \end{table}
 
 \subsection{HDP-SLDS}
+Finally, we are ready to apply the integrated HDP-SLDS to a well-behaved 2D obstacle game trajectory data. In this game, a group of player will try to reach the east side of the playground (where $x = 10000$) while tries to avoid being captured by opponents. Figure \ref{fig:trajectory} describes the trajectory of one player in  such game. As shown, she starts from the position $(0, 0)$, and consistently tries to dash to the east side of the playground unless she was forced to flee from opponents. It would be interesting to see our HDP-SLDS algorithm can distinguish between the two modes "dash" (a linear motion with focused direction) and "evade" (complicated nonlinear motion with no clear focus). 
+
+Setting K = 2, we set latent observations $\bx_t$ to have moderate dimension ($\bx_t \in \real^4$), and initialized latent dynamic parameters $\{A, B, \Sigma, R\}$ as discussed in Section \ref{sec:SLDS}, with slight modifications to reflect our knowledge about the dynamics of some of the modes. (in particular, for the "dash" motion, the first two dimensions of $B$ should be close to $[1 \; 0]$)
+
+\begin{figure}[!h]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
+\includegraphics[width = \linewidth]{"./plot/slds/trajectory"}
+\caption{Player Trajectory}
+\end{subfigure}
+\begin{subfigure}[b]{0.45\textwidth}
+\includegraphics[width = \linewidth]{"./plot/slds/result"}
+\caption{Estimation Result}
+\end{subfigure}
+\caption{2D Trajectory of a player in obstacle game}
+\label{fig:trajectory}
+\end{figure}
+
+The result of HDP-SLDS is displayed in Figure \ref{fig:trajectory} (b), where we ran extra 50 iterations after the convergence of $\{A, B\}$ (under L2 norm) until estimates for $\bz_{1:T}$ stabilized. As shown, HDP-SLDS are able to seperate the "dash" and "evade" mode reasonably well. The transition matrix in final iteration is estimated to be 
+$\begin{bmatrix} 0.9915 & 0.0085 \\ 0.0037 & 0.9963 \end{bmatrix}$, indicating rather strong self-transition behavior, which matches with the empirical observations that the player are rather consistent within modes. Finally, to further understand the dynamics of the "evade" motion, we plotted examples of trajectories (with random starting points within unit cube) arise from the estimated dynamic parameters $\{A_1, B_{1}\}$. As shown in Figure \ref{fig:evade}, it corresponds to a rather unstable dynamic whose trajectory is highly volatile and sensitive to starting position.
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=0.7\linewidth]{"./plot/slds/evade"}
+\caption{Example of "Evade" Motion}
+\label{fig:evade}
+\end{figure}
 
 \section{Conclusion and Future Direction}
 
@@ -510,8 +545,6 @@ N( \frac{n_{k}^{-(ji)}\sigma_0^2}{ n_{k}^{-(ji)}\sigma_0^2 + \sigma^2}
 (1 + \frac{\sigma_0^2}{n_{k}^{-(ji)} \sigma_0^2 + \sigma^2} ) \bI)
 \end{align*}
 
-
-\newpage
 \section{HDP for Hidden Markov Model}
 
 \subsection{Hidden Markov Model}
@@ -681,7 +714,6 @@ p(z_t | \by) = \frac{p(z_t, \by)}{\sum_{z_t} p(z_t, \by)}
 \end{align*}
 
 
-\clearpage
 \section{Chinese Restaurant Franchise}\label{sec:CRF}
 A hierarchical analogy of Chinese Restaurant Process, the Chinese Restaurant Franchise offers a convenient scheme to sample from the posterior of cluster-specific $\theta$'s in HDP. This process draw below analogy:
 \begin{itemize}
@@ -705,6 +737,7 @@ Integrating over $G_0$, the sampling scheme for table-specific dish $\psi_{jt} \
 \frac{\gamma}{m_{..} + \gamma} H
 \end{align*}
 
+\newpage
 \section{Converting Differential Equations into Linear Dynamical Systems} \label{sec:ode2lds}
 \subsubsection{Linear and Projectile
 Motion}
